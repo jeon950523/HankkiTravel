@@ -31,3 +31,26 @@ onMounted(() => health.check())
     <footer>가족의 한 끼에서 시작하는 맞춤 여행 플래너</footer>
   </main>
 </template>
+
+<style scoped>
+* { box-sizing: border-box; }
+:root { font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #272A27; background: #F7F3EB; font-synthesis: none; }
+body { margin: 0; min-width: 320px; }
+button { font: inherit; }
+.shell { width: 100%; max-width: 560px; margin: 0 auto; padding: max(28px, env(safe-area-inset-top)) 20px max(28px, env(safe-area-inset-bottom)); }
+.brand { display: flex; align-items: center; gap: 9px; font-size: 21px; font-weight: 700; color: #414A3C; }
+.tagline { margin: 40px 0 28px; font-size: 28px; font-weight: 700; line-height: 1.5; letter-spacing: -0.04em; }
+.status-card { padding: 24px 20px; background: #FFFDFA; border: 1px solid #DED2BE; border-radius: 20px; }
+.eyebrow { margin: 0 0 14px; font-size: 12px; letter-spacing: 0.08em; color: #6A564B; }
+h1 { margin: 0; font-size: 22px; line-height: 1.45; letter-spacing: -0.045em; word-break: keep-all; overflow-wrap: anywhere; }
+.description, .error-help { color: #62655F; font-size: 15px; line-height: 1.7; word-break: keep-all; }
+.connection { display: flex; align-items: flex-start; gap: 10px; margin: 24px 0 18px; padding: 16px 12px; border-radius: 12px; background: #F0F1EA; color: #414A3C; }
+.connection p { margin: 0; font-size: 15px; line-height: 1.6; word-break: keep-all; }
+.status-mark { flex: 0 0 18px; line-height: 24px; font-weight: 700; }
+button { width: 100%; min-height: 48px; padding: 12px; border: 0; border-radius: 10px; background: #414A3C; color: white; cursor: pointer; }
+button:disabled { opacity: 0.65; cursor: wait; }
+button:focus-visible { outline: 3px solid #C86B4A; outline-offset: 4px; }
+footer { margin-top: 26px; color: #62655F; font-size: 13px; line-height: 1.7; text-align: center; word-break: keep-all; }
+@media (min-width: 768px) { .shell { padding-top: 64px; } .status-card { padding: 30px; } }
+
+</style>
