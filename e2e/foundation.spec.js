@@ -33,7 +33,7 @@ test('loading, failure, retry and slow network', async ({ page }) => {
 })
 
 test('manifest, service worker and fallback navigation', async ({ page }) => {
-  await page.goto('/dev/diagnostics')
+  await page.goto('/')
   const manifest = await page.locator('link[rel="manifest"]').getAttribute('href')
   const response = await page.request.get(manifest)
   expect((await response.json()).name).toBe('한끼여행')

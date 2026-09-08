@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { createSSRApp } from 'vue'
 import { createPinia } from 'pinia'
 import { createMemoryHistory } from 'vue-router'
@@ -53,4 +53,23 @@ describe('제품 경로와 실제 상태를 구분하는 Shell', () => {
   expect(html).toContain('P0.1')
   expect(html).not.toContain('주요 메뉴')
  })
+})
+
+it('production 환경에서는 진단 경로를 등록하지 않고 일반 404를 렌더한다', async () => {
+ vi.stubEnv('DEV', false)
+ vi.resetModules()
+ try {
+  const { makeRouter: makeProductionRouter } = await import('./index')
+  const router = makeProductionRouter(createMemoryHistory())
+  expect(router.hasRoute('diagnostics')).toBe(false)
+  await router.push('/dev/diagnostics')
+  await router.isReady()
+  expect(router.currentRoute.value.name).toBe('not-found')
+  const html=await renderToString(createSSRApp(App).use(createPinia()).use(router))
+  expect(html).toContain('이 페이지를')
+  expect(html).not.toContain('P0.1')
+ } finally {
+  vi.unstubAllEnvs()
+  vi.resetModules()
+ }
 })
