@@ -1,0 +1,43 @@
+server:
+  port: 8300
+  error:
+    include-message: never
+    include-stacktrace: never
+spring:
+  application:
+    name: hankki-travel
+  config:
+    import: optional:file:../.env.local[.properties]
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:hankki_travel}?connectionTimeZone=Asia/Seoul&characterEncoding=UTF-8
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      connection-timeout: 5000
+  flyway:
+    enabled: true
+    clean-disabled: true
+  sql:
+    init:
+      mode: never
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+hankki:
+  web-base-url: ${WEB_BASE_URL:http://localhost:5175}
+  integrations:
+    tour-api-base-url: https://apis.data.go.kr/B551011/KorService2
+    kakao-base-url: https://dapi.kakao.com
+    connect-timeout: 3s
+    request-timeout: 8s
+logging:
+  level:
+    org.springframework.web: INFO
+    java.net.http: OFF

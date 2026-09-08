@@ -1,0 +1,6 @@
+package kr.hankkitravel.shared.integration;
+
+public enum IntegrationFailure {
+    SECRET_NOT_PRESENT, HTTP_4XX, HTTP_5XX, TIMEOUT, NETWORK_FAILURE,
+    JSON_PARSING_FAILURE, UPSTREAM_REJECTED, UNEXPECTED_HTTP_STATUS
+}

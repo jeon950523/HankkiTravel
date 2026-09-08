@@ -1,0 +1,71 @@
+{
+  "response": {
+    "header": {
+      "resultCode": "0000",
+      "resultMsg": "OK"
+    },
+    "body": {
+      "items": {
+        "item": [
+          {
+            "addr1": "경상북도 경주시 황남동",
+            "addr2": "31-1",
+            "areacode": "",
+            "cat1": "",
+            "cat2": "",
+            "cat3": "",
+            "contentid": "1492402",
+            "contenttypeid": "12",
+            "createdtime": "20111214235812",
+            "firstimage": "https://tong.visitkorea.or.kr/cms/resource/98/4105798_image2_1.jpg",
+            "firstimage2": "https://tong.visitkorea.or.kr/cms/resource/98/4105798_image3_1.jpg",
+            "cpyrhtDivCd": "Type1",
+            "mapx": "129.2128000000",
+            "mapy": "35.8382000000",
+            "mlevel": "6",
+            "modifiedtime": "20260901114538",
+            "sigungucode": "",
+            "tel": "",
+            "title": "경주 대릉원 일원",
+            "zipcode": "38166",
+            "lDongRegnCd": "47",
+            "lDongSignguCd": "130",
+            "lclsSystm1": "HS",
+            "lclsSystm2": "HS01",
+            "lclsSystm3": "HS010800"
+          },
+          {
+            "addr1": "경상북도 경주시 문무대왕면 불국로 1056-185",
+            "addr2": "",
+            "areacode": "",
+            "cat1": "",
+            "cat2": "",
+            "cat3": "",
+            "contentid": "2708718",
+            "contenttypeid": "12",
+            "createdtime": "20210310185555",
+            "firstimage": "https://tong.visitkorea.or.kr/cms/resource/63/4103863_image2_1.JPG",
+            "firstimage2": "https://tong.visitkorea.or.kr/cms/resource/63/4103863_image3_1.JPG",
+            "cpyrhtDivCd": "Type1",
+            "mapx": "129.3648896612",
+            "mapy": "35.7497300162",
+            "mlevel": "6",
+            "modifiedtime": "20260827154236",
+            "sigungucode": "",
+            "tel": "",
+            "title": "경주 풍력발전(바람의언덕)",
+            "zipcode": "38120",
+            "lDongRegnCd": "47",
+            "lDongSignguCd": "130",
+            "lclsSystm1": "EX",
+            "lclsSystm2": "EX06",
+            "lclsSystm3": "EX060900"
+          }
+        ]
+      },
+      "numOfRows": 100,
+      "pageNo": 1,
+      "totalCount": 202
+    }
+  }
+}

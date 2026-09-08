@@ -1,0 +1,10 @@
+spring:
+  config:
+    import: ""
+  datasource:
+    url: jdbc:h2:mem:foundation;MODE=MySQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+DATA_GO_KR_SERVICE_KEY: ""
+KAKAO_REST_API_KEY: ""
