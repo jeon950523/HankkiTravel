@@ -24,11 +24,11 @@ export default defineConfig({
   ],
   server: {
     port: 5175, strictPort: true,
-    proxy: { '/actuator/health': 'http://localhost:8300' },
+    proxy: { '/actuator/health': 'http://localhost:8300', '/api': 'http://localhost:8300' },
   },
   preview: {
     port: 5175, strictPort: true,
-    proxy: { '/actuator/health': 'http://localhost:8300' },
+    proxy: { '/actuator/health': 'http://localhost:8300', '/api': 'http://localhost:8300' },
   },
   test: { environment: 'node', include: ['src/**/*.test.js'], restoreMocks: true },
 })

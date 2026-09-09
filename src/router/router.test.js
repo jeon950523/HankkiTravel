@@ -18,11 +18,14 @@ describe('제품 경로와 실제 상태를 구분하는 Shell', () => {
   ['/', '좋은 한 끼가,'], ['/login', '카카오로 계속하기'],
   ['/profiles', '가족의 여행 이야기를 기다려요'], ['/profiles/new', '지금은 입력하거나 저장할 수 없어요.'],
   ['/travel/new', '어디로, 얼마 동안'], ['/auth/callback', '로그인 연결을'],
+  ['/admin/sync', '관광 데이터 동기화 운영'],
   ['/unknown', '이 페이지를'],
  ])('%s 렌더와 제목 계약', async (path, text) => {
   const { html, router } = await render(path)
   expect(html).toContain(text)
-  expect(html).toContain('주요 메뉴')
+  if (path === '/admin/sync') expect(html).not.toContain('주요 메뉴')
+  else expect(html).toContain('주요 메뉴')
+  expect(router.currentRoute.value.meta.standalone === true).toBe(path === '/admin/sync')
   expect(html).not.toContain('P0.1')
   expect(html).not.toContain('actuator')
   expect(router.currentRoute.value.meta.title).toBeTruthy()
