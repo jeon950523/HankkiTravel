@@ -16,6 +16,7 @@ import kr.hankkitravel.tourism.model.TourismPlace;
 import kr.hankkitravel.tourism.model.TourismRegion;
 import kr.hankkitravel.tourism.model.TourismSyncScope;
 import kr.hankkitravel.tourism.persistence.TourismCacheMapper;
+import kr.hankkitravel.tourism.model.TourismSyncStatus;
 import kr.hankkitravel.tourism.persistence.TourismSyncMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,7 +58,7 @@ class TourismSyncPersistenceTest {
     @Autowired PlatformTransactionManager transactionManager;
     @Autowired JdbcTemplate jdbc;
 
-    @Test void initialNoOpModifiedStaleMissingAndReappearanceAreDifferentialAndRestaurantIsOneToOne() {
+    @Test void sourceModifiedRawControlsStalenessAndDifferentialRestaurantCacheMutations() {
         var scope = new TourismSyncScope(TourismRegion.JEJU_CITY, TourismContentType.RESTAURANT);
         var source = new ScriptedSource();
         source.page(1, page(1, 2, place(scope, "r-1", "처음", "20260101010101"),
@@ -67,6 +68,7 @@ class TourismSyncPersistenceTest {
         var initial = sync.synchronize(scope);
         assertThat(initial.successful()).isTrue();
         assertThat(initial.counters().insertedCount()).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT source_modified_raw FROM tourism_places WHERE content_id = 'r-1'", String.class)).isEqualTo("20260101010101");
         assertThat(runs.findScopeStates()).singleElement().satisfies(state -> {
             assertThat(state.getScopeKey()).isEqualTo(scope.key());
             assertThat(state.getLastSuccessfulSyncAt()).isNotNull();
@@ -166,8 +168,62 @@ class TourismSyncPersistenceTest {
         assertThat(duplicate.counters().deactivatedCount()).isZero();
     }
 
+    @Test void suspiciousSnapshotKeepsThePriorCacheAndNeverDeactivatesMissingItems() {
+        var scope = new TourismSyncScope(TourismRegion.JEJU_CITY, TourismContentType.ATTRACTION);
+        var source = new ScriptedSource();
+        source.page(1, page(1, 429, snapshot(scope, "stable", 429, "20260101010101")));
+        var sync = service(source, 500, TourismSyncService.DEFAULT_SUSPICIOUS_SNAPSHOT_RETAIN_RATIO);
+        assertThat(sync.synchronize(scope).status()).isEqualTo(TourismSyncStatus.SUCCESS);
+
+        source.page(1, page(1, 429, snapshot(scope, "stable", 429, "20260101010101")));
+        var unchanged = sync.synchronize(scope);
+        assertThat(unchanged.status()).isEqualTo(TourismSyncStatus.SUCCESS);
+        assertThat(runs.findLastSuccessfulFetchedCount(scope.key())).isEqualTo(429);
+
+        source.page(1, page(1, 0));
+        var empty = sync.synchronize(scope);
+        assertThat(empty.failureCategory()).isEqualTo("SUSPICIOUS_SNAPSHOT_SHRINK");
+        assertThat(empty.status()).isEqualTo(TourismSyncStatus.SUSPICIOUS);
+        assertThat(empty.counters().deactivatedCount()).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM tourism_places WHERE active = TRUE", Integer.class)).isEqualTo(429);
+        assertThat(runs.findRecentRuns(100).getFirst().getFailureCategory()).isEqualTo("SUSPICIOUS_SNAPSHOT_SHRINK");
+
+        source.page(1, page(1, 200, snapshot(scope, "stable", 200, "20260101010102")));
+        var sharpDecrease = sync.synchronize(scope);
+        assertThat(sharpDecrease.status()).isEqualTo(TourismSyncStatus.SUSPICIOUS);
+        assertThat(sharpDecrease.counters().deactivatedCount()).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM tourism_places WHERE active = TRUE", Integer.class)).isEqualTo(429);
+
+        source.page(1, page(1, 400, snapshot(scope, "stable", 400, "20260101010103")));
+        var modestChange = sync.synchronize(scope);
+        assertThat(modestChange.status()).isEqualTo(TourismSyncStatus.SUCCESS);
+        assertThat(modestChange.counters().deactivatedCount()).isEqualTo(29);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM tourism_places WHERE active = TRUE", Integer.class)).isEqualTo(400);
+    }
+
+    @Test void contentTypeChangeUpdatesCanonicalTypeAndRemovesRestaurantSpecialization() {
+        var restaurantScope = new TourismSyncScope(TourismRegion.JEJU_CITY, TourismContentType.RESTAURANT);
+        var attractionScope = new TourismSyncScope(TourismRegion.JEJU_CITY, TourismContentType.ATTRACTION);
+        var source = new ScriptedSource();
+        source.page(1, page(1, 1, place(restaurantScope, "X", "음식점 기준", "20260101010101")));
+        var sync = service(source, 1);
+        assertThat(sync.synchronize(restaurantScope).successful()).isTrue();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM restaurants", Integer.class)).isEqualTo(1);
+
+        source.page(1, page(1, 1, place(attractionScope, "X", "관광지 변경", "20260101010102")));
+        assertThat(sync.synchronize(attractionScope).successful()).isTrue();
+        assertThat(jdbc.queryForObject("SELECT content_type_id FROM tourism_places WHERE content_id = 'X'", String.class))
+                .isEqualTo("12");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM restaurants", Integer.class)).isZero();
+    }
+
     private TourismSyncService service(ScriptedSource source, int pageSize) {
         return new TourismSyncService(source, places, runs, events, transactionManager, pageSize, 10);
+    }
+
+    private TourismSyncService service(ScriptedSource source, int pageSize, double suspiciousSnapshotRetainRatio) {
+        return new TourismSyncService(source, places, runs, events, transactionManager, pageSize, 10,
+                suspiciousSnapshotRetainRatio);
     }
 
     private static TourApiPage page(int number, int total, TourismPlace... places) {
@@ -178,6 +234,14 @@ class TourismSyncPersistenceTest {
         return new TourismPlace(id, scope.contentTypeId(), title, "주소", null, null, null, null, null, null,
                 null, scope.lDongRegnCd(), scope.lDongSignguCd(), null, null, null, "20260101000000", modified, null);
     }
+    private static TourismPlace[] snapshot(TourismSyncScope scope, String prefix, int count, String modified) {
+        var places = new TourismPlace[count];
+        for (int index = 0; index < count; index++) {
+            places[index] = place(scope, prefix + "-" + index, "fixture " + index, modified);
+        }
+        return places;
+    }
+
 
     private static final class ScriptedSource implements TourismSnapshotSource {
         private final Map<Integer, TourApiPage> pages = new HashMap<>();

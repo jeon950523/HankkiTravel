@@ -30,6 +30,7 @@ public class TourismAdminSyncService {
     private final TourismAdminSyncSettings settings;
     private final Executor executor;
     private final AtomicReference<String> activeScopeKey = new AtomicReference<>();
+    private final AtomicReference<String> lastFullSyncStatus = new AtomicReference<>();
 
     public TourismAdminSyncService(TourismSyncService sync, TourismSyncMapper runs,
             TourismAdminSyncSettings settings, @Qualifier("tourismAdminSyncExecutor") Executor executor) {
@@ -55,16 +56,19 @@ public class TourismAdminSyncService {
                     latest == null ? 0 : latest.getRemoteCallCount(),
                     latest == null ? null : latest.getFailureCategory());
         }).toList();
-        var failures = recentRuns.stream().filter(run -> "FAILED".equals(run.getStatus())).limit(FAILURE_LIMIT)
+        var failures = recentRuns.stream().filter(run -> "FAILED".equals(run.getStatus()) || "SUSPICIOUS".equals(run.getStatus())).limit(FAILURE_LIMIT)
                 .map(run -> new TourismAdminFailureSummary(run.getScopeKey(), run.getStartedAt(),
                         run.getFailureCategory(), run.getRemoteCallCount())).toList();
         return new TourismAdminSyncOverview(settings.operationallyEnabled(), settings.operationZone().getId(),
-                usedCalls, settings.dailyCallBudget(), remaining, budgetStatus(usedCalls), activeScopeKey.get(),
+                usedCalls, settings.dailyCallBudget(), remaining, budgetStatus(usedCalls), activeScopeKey.get(), lastFullSyncStatus.get(),
                 recentRuns.isEmpty() ? null : lastSyncedAt(recentRuns.getFirst()), statuses, failures);
     }
 
     public TourismAdminSyncDispatch request(String scopeKey) {
         final TourismSyncScope scope;
+        if (TourismSyncScope.isAllMvpScopesKey(scopeKey)) {
+            return requestAllMvpScopes();
+        }
         try {
             scope = TourismSyncScope.fromKey(scopeKey);
         } catch (IllegalArgumentException exception) {
@@ -90,6 +94,27 @@ public class TourismAdminSyncService {
         }
     }
 
+    private TourismAdminSyncDispatch requestAllMvpScopes() {
+        String scopeKey = TourismSyncScope.ALL_MVP_SCOPES_KEY;
+        if (!settings.operationallyEnabled()) {
+            return new TourismAdminSyncDispatch(false, "OPERATOR_CONFIGURATION_REQUIRED", scopeKey);
+        }
+        if (!activeScopeKey.compareAndSet(null, scopeKey)) {
+            return new TourismAdminSyncDispatch(false, "SYNC_ALREADY_RUNNING", scopeKey);
+        }
+        int availableCalls = remainingCalls();
+        if (availableCalls <= 0) {
+            activeScopeKey.compareAndSet(scopeKey, null);
+            return new TourismAdminSyncDispatch(false, "CALL_BUDGET_EXHAUSTED", scopeKey);
+        }
+        try {
+            executor.execute(this::synchronizeAllWithCurrentAllowance);
+            return new TourismAdminSyncDispatch(true, "QUEUED", scopeKey);
+        } catch (RejectedExecutionException exception) {
+            activeScopeKey.compareAndSet(scopeKey, null);
+            return new TourismAdminSyncDispatch(false, "SYNC_ALREADY_RUNNING", scopeKey);
+        }
+    }
     private void synchronizeWithCurrentAllowance(TourismSyncScope scope) {
         try {
             int availableCalls = remainingCalls();
@@ -98,7 +123,20 @@ public class TourismAdminSyncService {
             activeScopeKey.compareAndSet(scope.key(), null);
         }
     }
+
+    private void synchronizeAllWithCurrentAllowance() {
+        try {
+            int availableCalls = remainingCalls();
+            if (availableCalls > 0) {
+                lastFullSyncStatus.set(sync.synchronizeAllMvpScopes(availableCalls).status().name());
+            }
+        } finally {
+            activeScopeKey.compareAndSet(TourismSyncScope.ALL_MVP_SCOPES_KEY, null);
+        }
+    }
     private Instant lastSyncedAt(TourismSyncRun run) {
+
+
         return run.getCompletedAt() == null ? run.getStartedAt() : run.getCompletedAt();
     }
 

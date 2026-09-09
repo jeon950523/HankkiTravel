@@ -33,8 +33,9 @@ management:
 hankki:
   web-base-url: ${WEB_BASE_URL:http://localhost:5175}
   tourism-sync:
-    page-size: ${TOUR_API_PAGE_SIZE:10}
+    page-size: ${TOUR_API_PAGE_SIZE:100}
     max-pages: ${TOUR_API_MAX_PAGES:1000}
+    suspicious-snapshot-retain-ratio: ${TOUR_SYNC_SUSPICIOUS_RATIO:0.5}
     admin:
       enabled: ${ADMIN_SYNC_ENABLED:false}
       username: ${ADMIN_SYNC_USERNAME:}

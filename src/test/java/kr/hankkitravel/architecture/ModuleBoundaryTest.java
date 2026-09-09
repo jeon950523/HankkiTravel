@@ -112,7 +112,9 @@ class ModuleBoundaryTest {
                         : method.isAnnotationPresent(org.apache.ibatis.annotations.Select.class)
                         ? method.getAnnotation(org.apache.ibatis.annotations.Select.class).value()
                         : method.isAnnotationPresent(org.apache.ibatis.annotations.Update.class)
-                        ? method.getAnnotation(org.apache.ibatis.annotations.Update.class).value() : new String[0];
+                        ? method.getAnnotation(org.apache.ibatis.annotations.Update.class).value()
+                        : method.isAnnotationPresent(org.apache.ibatis.annotations.Delete.class)
+                        ? method.getAnnotation(org.apache.ibatis.annotations.Delete.class).value() : new String[0];
                 assertThat(sql).as(method.toString()).isNotEmpty();
                 var statement = String.join(" ", sql).replaceAll("(?i)ON DUPLICATE KEY UPDATE\\s+", "");
                 var matcher = tablePattern.matcher(statement);

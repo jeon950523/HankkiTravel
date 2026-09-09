@@ -6,6 +6,7 @@ import java.util.Objects;
 
 /** One independently recoverable remote snapshot: legal-dong region plus content type. */
 public record TourismSyncScope(TourismRegion region, TourismContentType contentType) {
+    public static final String ALL_MVP_SCOPES_KEY = "ALL_MVP_SCOPES";
     public TourismSyncScope {
         Objects.requireNonNull(region, "region");
         Objects.requireNonNull(contentType, "contentType");
@@ -30,4 +31,6 @@ public record TourismSyncScope(TourismRegion region, TourismContentType contentT
         return allMvpScopes().stream().filter(scope -> scope.key().equals(key)).findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("지원하지 않는 동기화 범위입니다."));
     }
+
+    public static boolean isAllMvpScopesKey(String key) { return ALL_MVP_SCOPES_KEY.equals(key); }
     }

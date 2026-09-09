@@ -73,10 +73,10 @@ class DatabaseFoundationTest {
     @Autowired RestaurantMapper restaurants;
     @Autowired TripMapper trips;
 
-    @Test void emptyDatabaseMigratesV1ThroughV7AndRestartHasNothingPending() {
+    @Test void emptyDatabaseMigratesV1ThroughV8AndRestartHasNothingPending() {
         assertThat(initialTableCount).isZero();
         assertThat(flyway.info().applied()).extracting(info -> info.getVersion().toString())
-                .containsExactly("1", "2", "3", "4", "5", "6", "7");
+                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8");
         assertThat(flyway.info().pending()).isEmpty();
         var restarted = Flyway.configure().dataSource(flyway.getConfiguration().getDataSource())
                 .locations("classpath:db/migration").cleanDisabled(true).load();

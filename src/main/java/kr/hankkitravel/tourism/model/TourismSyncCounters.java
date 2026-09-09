@@ -12,4 +12,8 @@ public record TourismSyncCounters(int remoteCallCount, int fetchedCount, int ins
     public static TourismSyncCounters failed(int remoteCalls, int fetched) {
         return new TourismSyncCounters(remoteCalls, fetched, 0, 0, 0, 0, 1);
     }
+
+    public static TourismSyncCounters suspicious(int remoteCalls, int fetched) {
+        return new TourismSyncCounters(remoteCalls, fetched, 0, 0, 0, 0, 0);
+    }
 }

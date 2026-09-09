@@ -62,6 +62,14 @@ public interface TourismSyncMapper {
             """)
     List<TourismSyncScopeState> findScopeStates();
 
+
+    @Select("""
+            SELECT successful_run.fetched_count
+            FROM tourism_sync_scope_states state
+            JOIN tourism_sync_runs successful_run ON successful_run.id = state.last_successful_run_id
+            WHERE state.scope_key = #{scopeKey}
+            """)
+    Integer findLastSuccessfulFetchedCount(@Param("scopeKey") String scopeKey);
     @Select("""
             SELECT COALESCE(SUM(remote_call_count), 0) FROM tourism_sync_runs
             WHERE started_at >= #{from} AND started_at < #{until}

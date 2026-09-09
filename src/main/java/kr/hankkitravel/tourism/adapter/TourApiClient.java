@@ -24,7 +24,7 @@ public final class TourApiClient {
 
     /** Sync boundary only; never expose as a per-user search proxy. Uses the decoded portal key. */
     public List<TourismPlace> fetchPage(int page, int rows) {
-        if (page < 1 || rows < 1 || rows > 100) throw new IllegalArgumentException("페이지/건수 범위를 확인하세요.");
+        if (page < 1 || rows < 1) throw new IllegalArgumentException("페이지/건수 범위를 확인하세요.");
         if (serviceKey == null || serviceKey.isBlank()) {
             throw new IntegrationException("TOUR_API", IntegrationFailure.SECRET_NOT_PRESENT);
         }

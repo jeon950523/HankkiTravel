@@ -11,7 +11,9 @@ import kr.hankkitravel.tourism.model.TourApiPage;
 import kr.hankkitravel.tourism.model.TourismCachePlace;
 import kr.hankkitravel.tourism.model.TourismPlace;
 import kr.hankkitravel.tourism.model.TourismPlaceCached;
+import kr.hankkitravel.tourism.model.TourismPlaceContentTypeChanged;
 import kr.hankkitravel.tourism.model.TourismSyncCounters;
+import kr.hankkitravel.tourism.model.TourismSyncBatchResult;
 import kr.hankkitravel.tourism.model.TourismSyncResult;
 import kr.hankkitravel.tourism.model.TourismSyncRun;
 import kr.hankkitravel.tourism.model.TourismSyncScope;
@@ -19,6 +21,7 @@ import kr.hankkitravel.tourism.model.TourismSyncStatus;
 import kr.hankkitravel.tourism.persistence.TourismCacheMapper;
 import kr.hankkitravel.tourism.persistence.TourismSyncMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -31,6 +34,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 public class TourismSyncService {
     private static final Pattern TOUR_TIME = Pattern.compile("\\d{14}");
+    public static final double DEFAULT_SUSPICIOUS_SNAPSHOT_RETAIN_RATIO = 0.5;
 
     private final TourismSnapshotSource source;
     private final TourismCacheMapper places;
@@ -39,23 +43,48 @@ public class TourismSyncService {
     private final TransactionTemplate transactions;
     private final int pageSize;
     private final int maxPages;
+    private final double suspiciousSnapshotRetainRatio;
 
+    @Autowired
     public TourismSyncService(TourismSnapshotSource source, TourismCacheMapper places, TourismSyncMapper runs,
             ApplicationEventPublisher events, PlatformTransactionManager transactionManager,
             @Value("${hankki.tourism-sync.page-size:10}") int pageSize,
-            @Value("${hankki.tourism-sync.max-pages:1000}") int maxPages) {
+            @Value("${hankki.tourism-sync.max-pages:1000}") int maxPages,
+            @Value("${hankki.tourism-sync.suspicious-snapshot-retain-ratio}") double suspiciousSnapshotRetainRatio) {
         if (pageSize < 1 || maxPages < 1) throw new IllegalArgumentException("Invalid sync paging config");
+        if (suspiciousSnapshotRetainRatio <= 0 || suspiciousSnapshotRetainRatio > 1) {
+            throw new IllegalArgumentException("이상 스냅샷 보존 비율은 0보다 크고 1 이하여야 합니다.");
+        }
         this.source = source;
         this.places = places;
         this.runs = runs;
         this.events = events;
         this.transactions = new TransactionTemplate(transactionManager);
+        this.suspiciousSnapshotRetainRatio = suspiciousSnapshotRetainRatio;
         this.pageSize = pageSize;
         this.maxPages = maxPages;
     }
 
+    public TourismSyncService(TourismSnapshotSource source, TourismCacheMapper places, TourismSyncMapper runs,
+            ApplicationEventPublisher events, PlatformTransactionManager transactionManager, int pageSize, int maxPages) {
+        this(source, places, runs, events, transactionManager, pageSize, maxPages,
+                DEFAULT_SUSPICIOUS_SNAPSHOT_RETAIN_RATIO);
+    }
+
     public List<TourismSyncResult> synchronizeAllMvpScopes() {
         return TourismSyncScope.allMvpScopes().stream().map(this::synchronize).toList();
+    }
+
+    public TourismSyncBatchResult synchronizeAllMvpScopes(int maximumRemoteCalls) {
+        if (maximumRemoteCalls < 0) throw new IllegalArgumentException("원격 호출 한도는 음수일 수 없습니다.");
+        var results = new ArrayList<TourismSyncResult>();
+        int remainingCalls = maximumRemoteCalls;
+        for (var scope : TourismSyncScope.allMvpScopes()) {
+            var result = synchronize(scope, remainingCalls);
+            results.add(result);
+            remainingCalls = Math.max(remainingCalls - result.counters().remoteCallCount(), 0);
+        }
+        return TourismSyncBatchResult.from(results);
     }
 
     public TourismSyncResult synchronize(TourismSyncScope scope) {
@@ -96,6 +125,9 @@ public class TourismSyncService {
             if (fetched != expectedTotal) throw new SnapshotException("INCOMPLETE_PAGINATION");
             int completedCalls = remoteCalls;
             int completedFetched = fetched;
+            if (isSuspiciousSnapshot(scope, completedFetched)) {
+                return suspicious(run, scope, completedCalls, completedFetched);
+            }
             var counters = transactions.execute(status -> apply(scope, snapshot, completedCalls, completedFetched, run));
             return new TourismSyncResult(scope, TourismSyncStatus.SUCCESS, counters, null);
         } catch (SnapshotException exception) {
@@ -127,7 +159,7 @@ public class TourismSyncService {
                 if (!existing.isActive()) {
                     places.update(incoming);
                     updated++;
-                    publishRestaurant(existing.getId(), scope);
+                    publishCacheMutation(existing, incoming, scope);
                 } else {
                     unchanged++;
                 }
@@ -140,7 +172,7 @@ public class TourismSyncService {
             if (!existing.isActive() || !existing.sameProjection(incoming)) {
                 places.update(incoming);
                 updated++;
-                publishRestaurant(existing.getId(), scope);
+                publishCacheMutation(existing, incoming, scope);
             } else {
                 unchanged++;
             }
@@ -162,12 +194,33 @@ public class TourismSyncService {
         }
     }
 
+    private void publishCacheMutation(TourismCachePlace existing, TourismCachePlace incoming, TourismSyncScope scope) {
+        if (!existing.getContentTypeId().equals(incoming.getContentTypeId())) {
+            events.publishEvent(new TourismPlaceContentTypeChanged(existing.getId(), existing.getContentTypeId(),
+                    incoming.getContentTypeId()));
+        }
+        publishRestaurant(existing.getId(), scope);
+    }
+
     private TourismSyncResult fail(TourismSyncRun run, TourismSyncScope scope, int remoteCalls,
             int fetched, String category) {
         var counters = TourismSyncCounters.failed(remoteCalls, fetched);
         run.complete(TourismSyncStatus.FAILED, counters, category, Instant.now());
         runs.completeRun(run);
         return new TourismSyncResult(scope, TourismSyncStatus.FAILED, counters, category);
+    }
+
+    private boolean isSuspiciousSnapshot(TourismSyncScope scope, int fetched) {
+        Integer previousFetched = runs.findLastSuccessfulFetchedCount(scope.key());
+        return previousFetched != null && previousFetched > 0
+                && (double) fetched / previousFetched < suspiciousSnapshotRetainRatio;
+    }
+
+    private TourismSyncResult suspicious(TourismSyncRun run, TourismSyncScope scope, int remoteCalls, int fetched) {
+        var counters = TourismSyncCounters.suspicious(remoteCalls, fetched);
+        run.complete(TourismSyncStatus.SUSPICIOUS, counters, "SUSPICIOUS_SNAPSHOT_SHRINK", Instant.now());
+        runs.completeRun(run);
+        return new TourismSyncResult(scope, TourismSyncStatus.SUSPICIOUS, counters, "SUSPICIOUS_SNAPSHOT_SHRINK");
     }
 
     private void validatePage(TourismSyncScope scope, TourApiPage page, int requestedPage,

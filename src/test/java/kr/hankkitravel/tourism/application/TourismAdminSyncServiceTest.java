@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import kr.hankkitravel.tourism.model.TourismSyncCounters;
 import kr.hankkitravel.tourism.model.TourismSyncRun;
+import kr.hankkitravel.tourism.model.TourismSyncBatchResult;
+import kr.hankkitravel.tourism.model.TourismSyncResult;
 import kr.hankkitravel.tourism.model.TourismSyncScope;
 import kr.hankkitravel.tourism.model.TourismSyncStatus;
 import kr.hankkitravel.tourism.persistence.TourismSyncMapper;
@@ -80,6 +82,29 @@ class TourismAdminSyncServiceTest {
         assertThat(overview.recentFailures()).extracting(TourismAdminFailureSummary::failureCategory)
                 .containsExactly("TIMEOUT");
     }
+    @Test void allMvpScopesUseTheSameSingleFlightAndExposePartialSuccess() {
+        var sync = mock(TourismSyncService.class);
+        var runs = mock(TourismSyncMapper.class);
+        var executor = new DeferredExecutor();
+        when(runs.sumRemoteCallCount(any(), any())).thenReturn(3);
+        when(runs.findRecentRuns(100)).thenReturn(List.of());
+        when(runs.findScopeStates()).thenReturn(List.of());
+        var first = TourismSyncScope.allMvpScopes().getFirst();
+        var second = TourismSyncScope.allMvpScopes().get(1);
+        var partial = TourismSyncBatchResult.from(List.of(
+                new TourismSyncResult(first, TourismSyncStatus.SUCCESS, new TourismSyncCounters(1, 1, 0, 0, 1, 0, 0), null),
+                new TourismSyncResult(second, TourismSyncStatus.FAILED, TourismSyncCounters.failed(1, 0), "TIMEOUT")));
+        when(sync.synchronizeAllMvpScopes(7)).thenReturn(partial);
+        var service = new TourismAdminSyncService(sync, runs,
+                new TourismAdminSyncSettings(true, 10, ZoneId.of("Asia/Seoul")), executor);
+
+        assertThat(service.request(TourismSyncScope.ALL_MVP_SCOPES_KEY).accepted()).isTrue();
+        assertThat(service.request("JEJU_CITY_ATTRACTION").code()).isEqualTo("SYNC_ALREADY_RUNNING");
+        executor.runNext();
+        verify(sync).synchronizeAllMvpScopes(7);
+        assertThat(service.overview().lastFullSyncStatus()).isEqualTo("PARTIAL_SUCCESS");
+    }
+
 
     private static final class DeferredExecutor implements Executor {
         private final List<Runnable> tasks = new ArrayList<>();
