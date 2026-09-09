@@ -97,7 +97,8 @@ class ModuleBoundaryTest {
         var ownership = Map.of(
                 "foundation_metadata", "foundation", "users", "identity", "guests", "identity",
                 "family_profiles", "profile", "family_members", "profile",
-                "tourism_places", "tourism", "restaurants", "restaurant", "trips", "trip");
+                "tourism_places", "tourism", "tourism_sync_runs", "tourism",
+                "tourism_sync_scope_states", "tourism", "restaurants", "restaurant", "trips", "trip");
         var tablePattern = java.util.regex.Pattern.compile("(?i)\\b(?:FROM|INTO|UPDATE|JOIN)\\s+([a-z_]+)");
         var production = new ClassFileImporter().withImportOption(new ImportOption.DoNotIncludeTests())
                 .importPackages("kr.hankkitravel");
@@ -109,9 +110,12 @@ class ModuleBoundaryTest {
                 String[] sql = method.isAnnotationPresent(org.apache.ibatis.annotations.Insert.class)
                         ? method.getAnnotation(org.apache.ibatis.annotations.Insert.class).value()
                         : method.isAnnotationPresent(org.apache.ibatis.annotations.Select.class)
-                        ? method.getAnnotation(org.apache.ibatis.annotations.Select.class).value() : new String[0];
+                        ? method.getAnnotation(org.apache.ibatis.annotations.Select.class).value()
+                        : method.isAnnotationPresent(org.apache.ibatis.annotations.Update.class)
+                        ? method.getAnnotation(org.apache.ibatis.annotations.Update.class).value() : new String[0];
                 assertThat(sql).as(method.toString()).isNotEmpty();
-                var matcher = tablePattern.matcher(String.join(" ", sql));
+                var statement = String.join(" ", sql).replaceAll("(?i)ON DUPLICATE KEY UPDATE\\s+", "");
+                var matcher = tablePattern.matcher(statement);
                 boolean found = false;
                 while (matcher.find()) {
                     found = true;
@@ -121,6 +125,6 @@ class ModuleBoundaryTest {
                 assertThat(found).as(method.toString()).isTrue();
             }
         }
-        assertThat(mapperCount).isEqualTo(8);
+        assertThat(mapperCount).isEqualTo(11);
     }
 }

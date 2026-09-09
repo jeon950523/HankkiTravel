@@ -73,10 +73,10 @@ class DatabaseFoundationTest {
     @Autowired RestaurantMapper restaurants;
     @Autowired TripMapper trips;
 
-    @Test void emptyDatabaseMigratesV1ThroughV5AndRestartHasNothingPending() {
+    @Test void emptyDatabaseMigratesV1ThroughV7AndRestartHasNothingPending() {
         assertThat(initialTableCount).isZero();
         assertThat(flyway.info().applied()).extracting(info -> info.getVersion().toString())
-                .containsExactly("1", "2", "3", "4", "5");
+                .containsExactly("1", "2", "3", "4", "5", "6", "7");
         assertThat(flyway.info().pending()).isEmpty();
         var restarted = Flyway.configure().dataSource(flyway.getConfiguration().getDataSource())
                 .locations("classpath:db/migration").cleanDisabled(true).load();
@@ -216,21 +216,21 @@ class DatabaseFoundationTest {
         assertThat(jdbc.queryForObject("""
                 SELECT COUNT(*) FROM information_schema.tables
                 WHERE table_schema = DATABASE() AND table_name IN
-                ('users','guests','family_profiles','family_members','tourism_places','restaurants','trips')
+                ('users','guests','family_profiles','family_members','tourism_places','restaurants','trips','tourism_sync_runs','tourism_sync_scope_states')
                 AND engine = 'InnoDB' AND table_collation LIKE 'utf8mb4%'
-                """, Integer.class)).isEqualTo(7);
+                """, Integer.class)).isEqualTo(9);
         assertThat(jdbc.queryForObject("""
                 SELECT COUNT(*) FROM information_schema.columns
                 WHERE table_schema = DATABASE() AND table_name <> 'foundation_metadata'
                 AND column_name IN ('created_at','updated_at','source_modified_at')
                 AND data_type = 'datetime' AND datetime_precision = 6
-                """, Integer.class)).isEqualTo(15);
+                """, Integer.class)).isEqualTo(16);
         assertThat(jdbc.queryForList("""
                 SELECT DISTINCT index_name FROM information_schema.statistics
                 WHERE table_schema = DATABASE()
                 """, String.class)).contains("ix_profiles_user", "ix_profiles_guest",
                 "ix_tourism_region_type", "ix_tourism_source_modified", "ix_trips_profile_status");
-        for (String table : new String[]{"users","guests","family_profiles","family_members","tourism_places","restaurants","trips"}) {
+        for (String table : new String[]{"users","guests","family_profiles","family_members","tourism_places","restaurants","trips","tourism_sync_runs","tourism_sync_scope_states"}) {
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM " + table, Integer.class)).as(table).isZero();
         }
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name LIKE 'nutrition%'", Integer.class))

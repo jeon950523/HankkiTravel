@@ -44,7 +44,7 @@ class TourApiParserTest {
     void malformedResponse(String json) { assertFailure(json, IntegrationFailure.JSON_PARSING_FAILURE); }
 
     @Test void quotaErrorIsDistinct() {
-        assertFailure("{\"response\":{\"header\":{\"resultCode\":\"22\"}}}", IntegrationFailure.UPSTREAM_REJECTED);
+        assertFailure("{\"response\":{\"header\":{\"resultCode\":\"22\"}}}", IntegrationFailure.QUOTA_EXCEEDED);
     }
 
     private String envelope(String items, int total) {

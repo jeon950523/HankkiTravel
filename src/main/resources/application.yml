@@ -32,6 +32,9 @@ management:
         enabled: true
 hankki:
   web-base-url: ${WEB_BASE_URL:http://localhost:5175}
+  tourism-sync:
+    page-size: ${TOUR_API_PAGE_SIZE:10}
+    max-pages: ${TOUR_API_MAX_PAGES:1000}
   integrations:
     tour-api-base-url: https://apis.data.go.kr/B551011/KorService2
     kakao-base-url: https://dapi.kakao.com

@@ -21,7 +21,9 @@ public class TourApiParser {
             require(raw != null && raw.response() != null && raw.response().header() != null
                     && raw.response().header().resultCode() != null);
             if (!"0000".equals(raw.response().header().resultCode())) {
-                throw new IntegrationException("TOUR_API", IntegrationFailure.UPSTREAM_REJECTED);
+                var failure = "22".equals(raw.response().header().resultCode())
+                        ? IntegrationFailure.QUOTA_EXCEEDED : IntegrationFailure.UPSTREAM_REJECTED;
+                throw new IntegrationException("TOUR_API", failure);
             }
             var body = raw.response().body();
             require(body != null && body.totalCount() != null && body.totalCount() >= 0);
@@ -44,11 +46,12 @@ public class TourApiParser {
                 result.add(convert(mapper.treeToValue(node, TourApiRawResponse.Item.class)));
             }
             return List.copyOf(result);
+        } catch (IntegrationException e) {
+            throw e;
         } catch (JacksonException | IllegalArgumentException e) {
             throw new IntegrationException("TOUR_API", IntegrationFailure.JSON_PARSING_FAILURE);
         }
     }
-
     private TourismPlace convert(TourApiRawResponse.Item item) {
         require(item != null && item.contentid() != null && !item.contentid().isBlank());
         Coordinates coordinates = null;
@@ -58,8 +61,11 @@ public class TourApiParser {
             // TourAPI's 0,0 means unavailable location, not a routable Korean place.
             if (x.signum() != 0 && y.signum() != 0) coordinates = new Coordinates(x, y);
         }
-        return new TourismPlace(item.contentid(), item.contenttypeid(), item.title(),
-                item.addr1(), coordinates, item.modifiedtime());
+        return new TourismPlace(item.contentid(), item.contenttypeid(), item.title(), item.addr1(),
+                item.addr2(), item.tel(), item.zipcode(), coordinates, item.firstimage(), item.firstimage2(),
+                item.cpyrhtDivCd(), item.lDongRegnCd(), item.lDongSignguCd(), item.lclsSystm1(),
+                item.lclsSystm2(), item.lclsSystm3(), item.createdtime(), item.modifiedtime(),
+                item.showflag());
     }
 
     private void require(boolean condition) {

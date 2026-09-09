@@ -14,6 +14,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import kr.hankkitravel.shared.geo.Coordinates;
 import kr.hankkitravel.tourism.adapter.TourApiClient;
+import kr.hankkitravel.tourism.adapter.TourApiPageParser;
+import kr.hankkitravel.tourism.adapter.TourApiSnapshotClient;
+import kr.hankkitravel.tourism.model.TourismContentType;
+import kr.hankkitravel.tourism.model.TourismRegion;
+import kr.hankkitravel.tourism.model.TourismSyncScope;
 import kr.hankkitravel.tourism.adapter.TourApiParser;
 import kr.hankkitravel.transit.adapter.KakaoTransitClient;
 import kr.hankkitravel.transit.adapter.KakaoTransitNormalizer;
@@ -69,6 +74,18 @@ class AdapterHttpContractTest {
         assertThat(received.get().getRawQuery()).contains("serviceKey=test%2B%2F%3Dkey", "numOfRows=1", "lDongRegnCd=50");
         assertThat(URLDecoder.decode(received.get().getRawQuery(), StandardCharsets.UTF_8)).contains("test+/=key");
         assertThat(auth.get()).isNull();
+    }
+
+    @Test void tourApiSnapshotUsesScopePaginationAndFullPageMetadata() {
+        body.set("{\"response\":{\"header\":{\"resultCode\":\"0000\"},\"body\":{\"items\":\"\",\"pageNo\":3,\"numOfRows\":10,\"totalCount\":0}}}");
+        var scope = new TourismSyncScope(TourismRegion.GYEONGJU, TourismContentType.LODGING);
+        var page = new TourApiSnapshotClient(http, new TourApiPageParser(new TourApiParser()),
+                base + "/KorService2", "test+/=key").fetch(scope, 3, 10);
+        assertThat(page.totalCount()).isZero();
+        assertThat(received.get().getPath()).isEqualTo("/KorService2/areaBasedList2");
+        assertThat(received.get().getRawQuery()).contains("pageNo=3", "numOfRows=10", "arrange=C",
+                "contentTypeId=32", "lDongRegnCd=47", "lDongSignguCd=130");
+        assertThat(URLDecoder.decode(received.get().getRawQuery(), StandardCharsets.UTF_8)).contains("test+/=key");
     }
 
     @ParameterizedTest
