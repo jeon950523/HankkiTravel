@@ -25,6 +25,15 @@ function messageForStatus(status) {
     || '운영 상태를 다시 확인해 주세요.'
 }
 
+function scopeStatusLabel(status) {
+  return ({ SUSPICIOUS: 'SUSPICIOUS · 이상 스냅샷 (캐시 유지)' })[status] || status || '기록 없음'
+}
+
+function fullSyncStatusLabel(status) {
+  return ({ SUCCESS: 'SUCCESS · 9개 Scope 완료', PARTIAL_SUCCESS: 'PARTIAL_SUCCESS · 일부 Scope 실패',
+    FAILED: 'FAILED · 완료 Scope 없음' })[status] || '실행 기록 없음'
+}
+
 function formatTime(value) {
   if (!value) return '기록 없음'
   return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
@@ -85,9 +94,9 @@ async function trigger(scopeKey) {
 
 <template>
   <div class="admin-sync-page">
-    <p class="eyebrow">운영자 전용 · P1.2</p>
+    <p class="eyebrow">운영자 전용 · P1.2.1</p>
     <h1 tabindex="-1">관광 데이터 동기화 운영</h1>
-    <p class="page-description">사용자 검색과 분리된 내부 관광 데이터 동기화 상태예요. 운영자 인증과 서버 설정이 확인된 경우에만 Scope별 실행을 요청할 수 있어요.</p>
+    <p class="page-description">사용자 검색과 분리된 내부 관광 데이터 동기화 상태예요. 운영자 인증과 서버 설정이 확인된 경우에만 Scope별 또는 전체 실행을 요청할 수 있어요.</p>
 
     <section class="surface admin-access" aria-labelledby="admin-access-title">
       <h2 id="admin-access-title">운영자 연결</h2>
@@ -109,7 +118,16 @@ async function trigger(scopeKey) {
         <article class="surface"><span>오늘 호출량</span><strong>{{ overview.dailyUsedCalls }}회</strong><small>{{ overview.operationZone }} 기준</small></article>
         <article class="surface"><span>내부 budget</span><strong>{{ overview.dailyCallBudget }}회</strong><small>남은 {{ overview.remainingCalls }}회</small></article>
         <article class="surface"><span>마지막 Sync</span><strong class="admin-date">{{ formatTime(overview.lastSyncAt) }}</strong><small>{{ messageForStatus(overview.budgetStatus) }}</small></article>
+        <article class="surface"><span>전체 Sync 결과</span><strong class="admin-date">{{ fullSyncStatusLabel(overview.lastFullSyncStatus) }}</strong><small>부분 성공은 완료 Scope를 되돌리지 않아요.</small></article>
       </section>
+
+      <section class="surface admin-full-run" aria-label="전체 동기화 실행">
+        <div><h2>9개 Scope 전체 동기화</h2><p class="body-copy">한 번에 하나만 실행하며, 실패한 Scope를 자동 재시도하지 않아요.</p></div>
+        <button class="action-button button-secondary" :disabled="!canTrigger({ latestStatus: null })" @click="trigger('ALL_MVP_SCOPES')">
+          {{ triggeringScope === 'ALL_MVP_SCOPES' ? '요청 중' : '9개 Scope 전체 동기화' }}
+        </button>
+      </section>
+
 
       <StatusMessage v-if="overview.activeScopeKey" kind="loading" title="동기화 실행 중">{{ overview.activeScopeKey }} Scope가 실행 중이에요. 다른 요청은 접수하지 않아요.</StatusMessage>
       <StatusMessage v-else-if="overview.budgetStatus !== 'AVAILABLE'" title="실행 전 확인">{{ messageForStatus(overview.budgetStatus) }}</StatusMessage>
@@ -119,8 +137,8 @@ async function trigger(scopeKey) {
         <div class="admin-scope-grid">
           <article v-for="scope in overview.scopes" :key="scope.scopeKey" class="surface admin-scope-card">
             <div><h3>{{ scope.regionName }} · {{ scope.contentTypeName }}</h3><p class="admin-key">{{ scope.scopeKey }}</p></div>
-            <dl><div><dt>최근 상태</dt><dd>{{ scope.latestStatus || '기록 없음' }}</dd></div><div><dt>마지막 성공</dt><dd>{{ formatTime(scope.lastSuccessfulSyncAt) }}</dd></div><div><dt>최근 호출</dt><dd>{{ scope.latestRemoteCallCount }}회</dd></div></dl>
-            <p v-if="scope.failureCategory" class="admin-failure">실패 분류: {{ scope.failureCategory }}</p>
+            <dl><div><dt>최근 상태</dt><dd :class="{ 'admin-suspicious': scope.latestStatus === 'SUSPICIOUS' }">{{ scopeStatusLabel(scope.latestStatus) }}</dd></div><div><dt>마지막 성공</dt><dd>{{ formatTime(scope.lastSuccessfulSyncAt) }}</dd></div><div><dt>최근 호출</dt><dd>{{ scope.latestRemoteCallCount }}회</dd></div></dl>
+            <p v-if="scope.failureCategory" class="admin-failure">실행 분류: {{ scope.failureCategory }}</p>
             <button class="action-button button-secondary" :disabled="!canTrigger(scope)" @click="trigger(scope.scopeKey)">
               {{ triggeringScope === scope.scopeKey ? '요청 중' : '이 Scope 동기화' }}
             </button>
@@ -129,7 +147,7 @@ async function trigger(scopeKey) {
       </section>
 
       <section v-if="overview.recentFailures.length" class="surface admin-failure-list" aria-labelledby="failure-summary-title">
-        <h2 id="failure-summary-title">최근 실패 요약</h2>
+        <h2 id="failure-summary-title">최근 실패·이상 스냅샷 요약</h2>
         <ul><li v-for="failure in overview.recentFailures" :key="`${failure.scopeKey}-${failure.startedAt}`"><strong>{{ failure.scopeKey }}</strong><span>{{ failure.failureCategory }} · {{ failure.remoteCallCount }}회 · {{ formatTime(failure.startedAt) }}</span></li></ul>
       </section>
     </template>
