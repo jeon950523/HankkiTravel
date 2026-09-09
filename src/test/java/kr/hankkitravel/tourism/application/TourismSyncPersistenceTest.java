@@ -67,6 +67,12 @@ class TourismSyncPersistenceTest {
         var initial = sync.synchronize(scope);
         assertThat(initial.successful()).isTrue();
         assertThat(initial.counters().insertedCount()).isEqualTo(2);
+        assertThat(runs.findScopeStates()).singleElement().satisfies(state -> {
+            assertThat(state.getScopeKey()).isEqualTo(scope.key());
+            assertThat(state.getLastSuccessfulSyncAt()).isNotNull();
+            assertThat(state.getLastSuccessfulRunId()).isPositive();
+        });
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM tourism_sync_scope_states", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM restaurants", Integer.class)).isEqualTo(2);
         LocalDateTime firstUpdatedAt = jdbc.queryForObject("SELECT updated_at FROM tourism_places WHERE content_id = 'r-1'", LocalDateTime.class);
         var noOp = sync.synchronize(scope);
@@ -96,6 +102,22 @@ class TourismSyncPersistenceTest {
         assertThat(sync.synchronize(scope).counters().updatedCount()).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT active FROM tourism_places WHERE content_id = 'r-2'", Boolean.class)).isTrue();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM restaurants", Integer.class)).isEqualTo(2);
+    }
+
+    @Test void callBudgetExhaustionNeverAppliesAPartialSnapshot() {
+        var scope = new TourismSyncScope(TourismRegion.GYEONGJU, TourismContentType.ATTRACTION);
+        var source = new ScriptedSource();
+        source.page(1, page(1, 1, place(scope, "budget-1", "기준", "20260101010101")));
+        var sync = service(source, 1);
+        assertThat(sync.synchronize(scope).successful()).isTrue();
+
+        source.page(1, page(1, 2, place(scope, "budget-1", "부분 수정", "20260101010102")))
+                .page(2, page(2, 2, place(scope, "budget-2", "새 항목", "20260101010102")));
+        var exhausted = sync.synchronize(scope, 1);
+        assertThat(exhausted.failureCategory()).isEqualTo("CALL_BUDGET_EXHAUSTED");
+        assertThat(exhausted.counters().remoteCallCount()).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT title FROM tourism_places WHERE content_id = 'budget-1'", String.class)).isEqualTo("기준");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM tourism_places WHERE content_id = 'budget-2'", Integer.class)).isZero();
     }
 
     @Test void scopeIsolationAndIncompletePagesNeverDeactivateExistingCache() {

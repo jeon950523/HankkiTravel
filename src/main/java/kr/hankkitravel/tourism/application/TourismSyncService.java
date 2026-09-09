@@ -59,6 +59,16 @@ public class TourismSyncService {
     }
 
     public TourismSyncResult synchronize(TourismSyncScope scope) {
+        return synchronize(scope, Integer.MAX_VALUE);
+    }
+
+    /**
+     * The operator surface supplies the remaining daily allowance. The ordinary P1.1 boundary
+     * remains unbounded by an operator budget, while an interrupted budgeted snapshot applies no
+     * partial writes because fetching finishes before the transaction starts.
+     */
+    public TourismSyncResult synchronize(TourismSyncScope scope, int maximumRemoteCalls) {
+        if (maximumRemoteCalls < 0) throw new IllegalArgumentException("원격 호출 한도는 음수일 수 없습니다.");
         var run = new TourismSyncRun(scope, Instant.now());
         runs.insertRun(run);
         int remoteCalls = 0;
@@ -70,6 +80,7 @@ public class TourismSyncService {
             int expectedTotal = -1;
             for (int pageNo = 1; ; pageNo++) {
                 if (pageNo > maxPages) throw new SnapshotException("INCOMPLETE_PAGINATION");
+                if (remoteCalls >= maximumRemoteCalls) throw new SnapshotException("CALL_BUDGET_EXHAUSTED");
                 remoteCalls++;
                 TourApiPage page = source.fetch(scope, pageNo, pageSize);
                 validatePage(scope, page, pageNo, expectedTotal, allContentIds, pageFingerprints);

@@ -35,6 +35,12 @@ hankki:
   tourism-sync:
     page-size: ${TOUR_API_PAGE_SIZE:10}
     max-pages: ${TOUR_API_MAX_PAGES:1000}
+    admin:
+      enabled: ${ADMIN_SYNC_ENABLED:false}
+      username: ${ADMIN_SYNC_USERNAME:}
+      password: ${ADMIN_SYNC_PASSWORD:}
+      daily-call-budget: ${TOURISM_SYNC_DAILY_CALL_BUDGET:0}
+      operation-zone: ${TOURISM_SYNC_OPERATION_ZONE:Asia/Seoul}
   integrations:
     tour-api-base-url: https://apis.data.go.kr/B551011/KorService2
     kakao-base-url: https://dapi.kakao.com

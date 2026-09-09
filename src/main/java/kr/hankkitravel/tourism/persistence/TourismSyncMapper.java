@@ -1,11 +1,14 @@
 package kr.hankkitravel.tourism.persistence;
 
 import java.time.Instant;
+import java.util.List;
 import kr.hankkitravel.tourism.model.TourismSyncRun;
+import kr.hankkitravel.tourism.model.TourismSyncScopeState;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
 @Mapper
@@ -40,4 +43,28 @@ public interface TourismSyncMapper {
     int recordSuccessfulScope(@Param("scopeKey") String scopeKey, @Param("lDongRegnCd") String lDongRegnCd,
             @Param("lDongSignguCd") String lDongSignguCd, @Param("contentTypeId") String contentTypeId,
             @Param("completedAt") Instant completedAt, @Param("runId") long runId);
+
+    @Select("""
+            SELECT id, scope_key AS scopeKey, l_dong_regn_cd AS lDongRegnCd, l_dong_signgu_cd AS lDongSignguCd,
+                content_type_id AS contentTypeId, started_at AS startedAt, completed_at AS completedAt, status,
+                remote_call_count AS remoteCallCount, fetched_count AS fetchedCount, inserted_count AS insertedCount,
+                updated_count AS updatedCount, unchanged_count AS unchangedCount,
+                deactivated_count AS deactivatedCount, failed_count AS failedCount,
+                failure_category AS failureCategory
+            FROM tourism_sync_runs ORDER BY started_at DESC LIMIT #{limit}
+            """)
+    List<TourismSyncRun> findRecentRuns(@Param("limit") int limit);
+
+    @Select("""
+            SELECT scope_key AS scopeKey, last_successful_sync_at AS lastSuccessfulSyncAt,
+                last_successful_run_id AS lastSuccessfulRunId
+            FROM tourism_sync_scope_states
+            """)
+    List<TourismSyncScopeState> findScopeStates();
+
+    @Select("""
+            SELECT COALESCE(SUM(remote_call_count), 0) FROM tourism_sync_runs
+            WHERE started_at >= #{from} AND started_at < #{until}
+            """)
+    int sumRemoteCallCount(@Param("from") Instant from, @Param("until") Instant until);
 }

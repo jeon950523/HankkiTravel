@@ -25,4 +25,9 @@ public record TourismSyncScope(TourismRegion region, TourismContentType contentT
         }
         return List.copyOf(scopes);
 }
+
+    public static TourismSyncScope fromKey(String key) {
+        return allMvpScopes().stream().filter(scope -> scope.key().equals(key)).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("지원하지 않는 동기화 범위입니다."));
+    }
     }
