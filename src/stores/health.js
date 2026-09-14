@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { apiUrl } from '../config/api'
 
 export const useHealthStore = defineStore('health', () => {
   const status = ref('idle')
@@ -9,7 +10,7 @@ export const useHealthStore = defineStore('health', () => {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 8000)
     try {
-      const response = await fetch('/actuator/health', { cache: 'no-store', signal: controller.signal })
+      const response = await fetch(apiUrl('/actuator/health'), { cache: 'no-store', signal: controller.signal })
       if (!response.ok) throw new Error('Health request failed')
       const body = await response.json()
       status.value = body.status === 'UP' ? 'up' : 'error'

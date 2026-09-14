@@ -1,4 +1,5 @@
 <script setup>
+import { apiUrl } from '../config/api'
 import { computed, ref } from 'vue'
 import StatusMessage from '../components/StatusMessage.vue'
 
@@ -48,7 +49,7 @@ async function loadStatus(preserveNotice = false) {
   }
   loading.value = true
   try {
-    const response = await fetch('/api/admin/tourism-sync/status', {
+    const response = await fetch(apiUrl('/api/admin/tourism-sync/status'), {
       headers: { Authorization: basicAuthorization(), Accept: 'application/json' },
     })
     if (!response.ok) throw new Error(response.status === 401 ? 'AUTH_REQUIRED' : 'STATUS_FAILED')
@@ -69,7 +70,7 @@ async function trigger(scopeKey) {
   notice.value = ''
   triggeringScope.value = scopeKey
   try {
-    const response = await fetch('/api/admin/tourism-sync/runs', {
+    const response = await fetch(apiUrl('/api/admin/tourism-sync/runs'), {
       method: 'POST',
       headers: { Authorization: basicAuthorization(), Accept: 'application/json', 'Content-Type': 'application/json' },
       body: JSON.stringify({ scopeKey }),
