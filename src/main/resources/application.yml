@@ -7,7 +7,7 @@ spring:
   application:
     name: hankki-travel
   config:
-    import: optional:file:../.env.local[.properties]
+    import: optional:file:.env.local[.properties]
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:hankki_planb}?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8
     username: ${DB_USERNAME}

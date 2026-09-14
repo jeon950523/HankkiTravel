@@ -66,7 +66,7 @@ class PlanBDatabaseFoundationTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM nutrition_foods", Integer.class)).isZero();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM nutrition_import_runs", Integer.class)).isZero();
 
-        Path source = Path.of("..", "..", "20260828_음식DB_19617건.xlsx").toAbsolutePath().normalize();
+        Path source = Path.of("src", "test", "resources", "nutrition", "20260828_음식DB_19617건.xlsx").toAbsolutePath().normalize();
         var firstImport = nutritionImport.importFrom(source);
         assertThat(firstImport.sourceRowCount()).isEqualTo(19_617);
         assertThat(firstImport.importedCount()).isEqualTo(19_534);
