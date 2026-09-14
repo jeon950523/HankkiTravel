@@ -46,6 +46,9 @@ for (const width of [360, 390]) {
     await expect(page.getByText('SUSPICIOUS · 이상 스냅샷 (캐시 유지)')).toBeVisible()
     await expect(page.getByText('PARTIAL_SUCCESS · 일부 Scope 실패')).toBeVisible()
     await expect(page.getByText('최근 실패·이상 스냅샷 요약')).toBeVisible()
+    await expect(page.getByText('마지막 시도').first()).toBeVisible()
+    await expect(page.getByText('마지막 성공').first()).toBeVisible()
+    await expect(page.locator('.admin-scope-card').first().getByRole('button', { name: '이 Scope 동기화' })).toBeEnabled()
     await page.getByRole('button', { name: '9개 Scope 전체 동기화' }).click()
     await expect.poll(() => requestedScopes.length).toBe(1)
     expect(requestedScopes[0]).toBe('ALL_MVP_SCOPES')
@@ -56,6 +59,30 @@ for (const width of [360, 390]) {
     expect(statusRequests).toBeGreaterThanOrEqual(2)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([])
+    expect(await page.evaluate(() => Object.keys(sessionStorage))).toEqual([])
     expect(errors).toEqual([])
   })
 }
+
+test('persisted RUNNING history does not disable a CTA without a runtime active scope', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const status = JSON.parse(JSON.stringify(overview))
+  status.scopes[0].latestStatus = 'RUNNING'
+  status.scopes[0].lastAttemptAt = '2026-09-14T10:32:00Z'
+  status.activeScopeKey = null
+  await page.route('**/api/admin/tourism-sync/status', route => route.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify(status),
+  }))
+  await page.goto('/admin/sync')
+  await page.getByLabel('운영자 아이디').fill('operator-test-user')
+  await page.getByLabel('운영자 비밀번호').fill('operator-test-password')
+  await page.getByRole('button', { name: '운영 상태 불러오기' }).click()
+  const scopeButton = page.locator('.admin-scope-card').first().getByRole('button', { name: '이 Scope 동기화' })
+  await expect(scopeButton).toBeEnabled()
+
+  status.activeScopeKey = 'JEJU_CITY_ATTRACTION'
+  await page.getByRole('button', { name: '운영 상태 불러오기' }).click()
+  await expect(page.getByText('동기화 실행 중')).toBeVisible()
+  await expect(scopeButton).toBeDisabled()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})

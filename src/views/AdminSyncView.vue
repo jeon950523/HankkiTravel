@@ -12,7 +12,7 @@ const notice = ref('')
 
 const hasCredentials = computed(() => username.value.trim() && password.value)
 const canTrigger = scope => Boolean(overview.value?.operatorEnabled && overview.value?.remainingCalls > 0
-  && !overview.value?.activeScopeKey && !triggeringScope.value && scope.latestStatus !== 'RUNNING')
+  && !overview.value?.activeScopeKey && !triggeringScope.value)
 
 function basicAuthorization() {
   const bytes = new TextEncoder().encode(`${username.value}:${password.value}`)
@@ -100,7 +100,7 @@ async function trigger(scopeKey) {
 
     <section class="surface admin-access" aria-labelledby="admin-access-title">
       <h2 id="admin-access-title">운영자 연결</h2>
-      <p class="body-copy">자격 증명은 이 화면과 브라우저 저장소에 남기지 않아요.</p>
+      <p class="body-copy">자격 증명은 브라우저 저장소에 저장하지 않아요.</p>
       <div class="admin-access-fields">
         <label>운영자 아이디<input v-model="username" autocomplete="username" inputmode="text" /></label>
         <label>운영자 비밀번호<input v-model="password" type="password" autocomplete="current-password" /></label>
@@ -137,7 +137,7 @@ async function trigger(scopeKey) {
         <div class="admin-scope-grid">
           <article v-for="scope in overview.scopes" :key="scope.scopeKey" class="surface admin-scope-card">
             <div><h3>{{ scope.regionName }} · {{ scope.contentTypeName }}</h3><p class="admin-key">{{ scope.scopeKey }}</p></div>
-            <dl><div><dt>최근 상태</dt><dd :class="{ 'admin-suspicious': scope.latestStatus === 'SUSPICIOUS' }">{{ scopeStatusLabel(scope.latestStatus) }}</dd></div><div><dt>마지막 성공</dt><dd>{{ formatTime(scope.lastSuccessfulSyncAt) }}</dd></div><div><dt>최근 호출</dt><dd>{{ scope.latestRemoteCallCount }}회</dd></div></dl>
+            <dl><div><dt>최근 실행 이력</dt><dd :class="{ 'admin-suspicious': scope.latestStatus === 'SUSPICIOUS' }">{{ scopeStatusLabel(scope.latestStatus) }}</dd></div><div><dt>마지막 시도</dt><dd>{{ formatTime(scope.lastAttemptAt) }}</dd></div><div><dt>마지막 성공</dt><dd>{{ formatTime(scope.lastSuccessfulSyncAt) }}</dd></div><div><dt>최근 호출</dt><dd>{{ scope.latestRemoteCallCount }}회</dd></div></dl>
             <p v-if="scope.failureCategory" class="admin-failure">실행 분류: {{ scope.failureCategory }}</p>
             <button class="action-button button-secondary" :disabled="!canTrigger(scope)" @click="trigger(scope.scopeKey)">
               {{ triggeringScope === scope.scopeKey ? '요청 중' : '이 Scope 동기화' }}

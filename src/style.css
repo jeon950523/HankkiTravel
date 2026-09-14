@@ -188,7 +188,7 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 .admin-scope-grid { display: grid; gap: 14px; margin-top: 18px; }
 .admin-scope-card { display: grid; gap: 18px; }
 .admin-key { margin-top: 5px; color: var(--color-secondary); font-size: 12px; overflow-wrap: anywhere; }
-.admin-scope-card dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.admin-scope-card dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
 .admin-scope-card dl div { min-width: 0; border-top: 1px solid var(--color-sand); padding-top: 9px; }
 .admin-scope-card dt { color: var(--color-secondary); font-size: 11px; }
 .admin-scope-card dd { margin: 2px 0 0; color: var(--color-olive); font-size: 13px; font-weight: 650; overflow-wrap: anywhere; }
