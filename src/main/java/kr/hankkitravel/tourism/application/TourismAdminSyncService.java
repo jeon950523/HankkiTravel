@@ -77,20 +77,27 @@ public class TourismAdminSyncService {
         if (!settings.operationallyEnabled()) {
             return new TourismAdminSyncDispatch(false, "OPERATOR_CONFIGURATION_REQUIRED", scope.key());
         }
-        if (!activeScopeKey.compareAndSet(null, scope.key())) {
-            return new TourismAdminSyncDispatch(false, "SYNC_ALREADY_RUNNING", scope.key());
+        return dispatch(scope.key(), () -> executor.execute(() -> synchronizeWithCurrentAllowance(scope)));
+    }
+
+    private TourismAdminSyncDispatch dispatch(String scopeKey, Runnable submit) {
+        if (!activeScopeKey.compareAndSet(null, scopeKey)) {
+            return new TourismAdminSyncDispatch(false, "SYNC_ALREADY_RUNNING", scopeKey);
         }
-        int availableCalls = remainingCalls();
-        if (availableCalls <= 0) {
-            activeScopeKey.compareAndSet(scope.key(), null);
-            return new TourismAdminSyncDispatch(false, "CALL_BUDGET_EXHAUSTED", scope.key());
-        }
+        boolean handedToWorker = false;
         try {
-            executor.execute(() -> synchronizeWithCurrentAllowance(scope));
-            return new TourismAdminSyncDispatch(true, "QUEUED", scope.key());
+            if (remainingCalls() <= 0) {
+                return new TourismAdminSyncDispatch(false, "CALL_BUDGET_EXHAUSTED", scopeKey);
+            }
+            submit.run();
+            handedToWorker = true;
+            return new TourismAdminSyncDispatch(true, "QUEUED", scopeKey);
         } catch (RejectedExecutionException exception) {
-            activeScopeKey.compareAndSet(scope.key(), null);
-            return new TourismAdminSyncDispatch(false, "SYNC_ALREADY_RUNNING", scope.key());
+            return new TourismAdminSyncDispatch(false, "SYNC_ALREADY_RUNNING", scopeKey);
+        } catch (RuntimeException exception) {
+            return new TourismAdminSyncDispatch(false, "SYNC_DISPATCH_FAILED", scopeKey);
+        } finally {
+            if (!handedToWorker) activeScopeKey.compareAndSet(scopeKey, null);
         }
     }
 
@@ -99,28 +106,14 @@ public class TourismAdminSyncService {
         if (!settings.operationallyEnabled()) {
             return new TourismAdminSyncDispatch(false, "OPERATOR_CONFIGURATION_REQUIRED", scopeKey);
         }
-        if (!activeScopeKey.compareAndSet(null, scopeKey)) {
-            return new TourismAdminSyncDispatch(false, "SYNC_ALREADY_RUNNING", scopeKey);
-        }
-        int availableCalls = remainingCalls();
-        if (availableCalls <= 0) {
-            activeScopeKey.compareAndSet(scopeKey, null);
-            return new TourismAdminSyncDispatch(false, "CALL_BUDGET_EXHAUSTED", scopeKey);
-        }
-        try {
-            executor.execute(this::synchronizeAllWithCurrentAllowance);
-            return new TourismAdminSyncDispatch(true, "QUEUED", scopeKey);
-        } catch (RejectedExecutionException exception) {
-            activeScopeKey.compareAndSet(scopeKey, null);
-            return new TourismAdminSyncDispatch(false, "SYNC_ALREADY_RUNNING", scopeKey);
-        }
+        return dispatch(scopeKey, () -> executor.execute(this::synchronizeAllWithCurrentAllowance));
     }
     private void synchronizeWithCurrentAllowance(TourismSyncScope scope) {
         try {
             int availableCalls = remainingCalls();
             if (availableCalls > 0) sync.synchronize(scope, availableCalls);
         } finally {
-            activeScopeKey.compareAndSet(scope.key(), null);
+            activeScopeKey.set(null);
         }
     }
 
@@ -131,7 +124,7 @@ public class TourismAdminSyncService {
                 lastFullSyncStatus.set(sync.synchronizeAllMvpScopes(availableCalls).status().name());
             }
         } finally {
-            activeScopeKey.compareAndSet(TourismSyncScope.ALL_MVP_SCOPES_KEY, null);
+            activeScopeKey.set(null);
         }
     }
     private Instant lastSyncedAt(TourismSyncRun run) {

@@ -48,7 +48,7 @@ public class TourismSyncService {
     @Autowired
     public TourismSyncService(TourismSnapshotSource source, TourismCacheMapper places, TourismSyncMapper runs,
             ApplicationEventPublisher events, PlatformTransactionManager transactionManager,
-            @Value("${hankki.tourism-sync.page-size:10}") int pageSize,
+            @Value("${hankki.tourism-sync.page-size}") int pageSize,
             @Value("${hankki.tourism-sync.max-pages:1000}") int maxPages,
             @Value("${hankki.tourism-sync.suspicious-snapshot-retain-ratio}") double suspiciousSnapshotRetainRatio) {
         if (pageSize < 1 || maxPages < 1) throw new IllegalArgumentException("Invalid sync paging config");

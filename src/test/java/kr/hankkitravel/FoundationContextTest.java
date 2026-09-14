@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
@@ -24,11 +25,16 @@ class FoundationContextTest {
     @Autowired FoundationMapper mapper;
     @Autowired Flyway flyway;
     @LocalServerPort int port;
+    @Value("${hankki.tourism-sync.page-size}") int tourismSyncPageSize;
 
     @Test void contextMigrationAndMyBatis() {
         assertThat(mapper.findVersion()).isEqualTo("P0.1");
         assertThat(flyway.migrate().migrationsExecuted).isZero();
         assertThat(flyway.validateWithResult().validationSuccessful).isTrue();
+    }
+
+    @Test void tourismSyncPageSizeDefaultsToOneHundred() {
+        assertThat(tourismSyncPageSize).isEqualTo(100);
     }
 
     @Test void healthIsPublicAndOtherEndpointsAreDenied() throws Exception {

@@ -1,6 +1,7 @@
 package kr.hankkitravel.tourism.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -15,6 +16,7 @@ import kr.hankkitravel.tourism.model.TourismContentType;
 import kr.hankkitravel.tourism.model.TourismPlace;
 import kr.hankkitravel.tourism.model.TourismRegion;
 import kr.hankkitravel.tourism.model.TourismSyncScope;
+import kr.hankkitravel.tourism.model.TourismSyncRun;
 import kr.hankkitravel.tourism.persistence.TourismCacheMapper;
 import kr.hankkitravel.tourism.model.TourismSyncStatus;
 import kr.hankkitravel.tourism.persistence.TourismSyncMapper;
@@ -57,6 +59,7 @@ class TourismSyncPersistenceTest {
     @Autowired ApplicationEventPublisher events;
     @Autowired PlatformTransactionManager transactionManager;
     @Autowired JdbcTemplate jdbc;
+    @Autowired TourismSyncRunRecovery recovery;
 
     @Test void sourceModifiedRawControlsStalenessAndDifferentialRestaurantCacheMutations() {
         var scope = new TourismSyncScope(TourismRegion.JEJU_CITY, TourismContentType.RESTAURANT);
@@ -216,6 +219,50 @@ class TourismSyncPersistenceTest {
                 .isEqualTo("12");
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM restaurants", Integer.class)).isZero();
     }
+
+    @Test void customSuspiciousRatioHonorsStrictBoundaryAndRejectsInvalidValues() {
+        var equalScope = new TourismSyncScope(TourismRegion.JEJU_CITY, TourismContentType.ATTRACTION);
+        var source = new ScriptedSource();
+        source.page(1, page(1, 4, snapshot(equalScope, "equal", 4, "20260101010101")));
+        var equal = service(source, 4, 0.75);
+        assertThat(equal.synchronize(equalScope).status()).isEqualTo(TourismSyncStatus.SUCCESS);
+        source.page(1, page(1, 3, snapshot(equalScope, "equal", 3, "20260101010102")));
+        assertThat(equal.synchronize(equalScope).status()).isEqualTo(TourismSyncStatus.SUCCESS);
+
+        var shrinkScope = new TourismSyncScope(TourismRegion.SEOGWIPO, TourismContentType.LODGING);
+        source.page(1, page(1, 4, snapshot(shrinkScope, "shrink", 4, "20260101010101")));
+        var shrink = service(source, 4, 0.75);
+        assertThat(shrink.synchronize(shrinkScope).status()).isEqualTo(TourismSyncStatus.SUCCESS);
+        source.page(1, page(1, 2, snapshot(shrinkScope, "shrink", 2, "20260101010102")));
+        assertThat(shrink.synchronize(shrinkScope).status()).isEqualTo(TourismSyncStatus.SUSPICIOUS);
+
+        assertThatThrownBy(() -> service(source, 1, 0)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service(source, 1, -0.1)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service(source, 1, 1.1)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test void interruptedRunningRunIsReconciledWithoutChangingCacheOrCheckpoint() throws Exception {
+        var scope = new TourismSyncScope(TourismRegion.JEJU_CITY, TourismContentType.ATTRACTION);
+        var source = new ScriptedSource().page(1, page(1, 1, place(scope, "recovery", "기준", "20260101010101")));
+        assertThat(service(source, 1).synchronize(scope).successful()).isTrue();
+        long successfulRunId = runs.findScopeStates().getFirst().getLastSuccessfulRunId();
+        var interrupted = new TourismSyncRun(scope, java.time.Instant.now().plusSeconds(60));
+        runs.insertRun(interrupted);
+
+        recovery.run(null);
+
+        assertThat(runs.findRecentRuns(10).getFirst()).satisfies(run -> {
+            assertThat(run.getStatus()).isEqualTo("FAILED");
+            assertThat(run.getFailureCategory()).isEqualTo("INTERRUPTED");
+            assertThat(run.getCompletedAt()).isNotNull();
+            assertThat(run.getInsertedCount()).isZero();
+            assertThat(run.getUpdatedCount()).isZero();
+            assertThat(run.getDeactivatedCount()).isZero();
+        });
+        assertThat(runs.findScopeStates().getFirst().getLastSuccessfulRunId()).isEqualTo(successfulRunId);
+        assertThat(jdbc.queryForObject("SELECT active FROM tourism_places WHERE content_id = 'recovery'", Boolean.class)).isTrue();
+    }
+
 
     private TourismSyncService service(ScriptedSource source, int pageSize) {
         return new TourismSyncService(source, places, runs, events, transactionManager, pageSize, 10);

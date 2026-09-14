@@ -33,6 +33,13 @@ public interface TourismSyncMapper {
             """)
     int completeRun(TourismSyncRun run);
 
+    @Update("""
+            UPDATE tourism_sync_runs SET status = 'FAILED', completed_at = #{completedAt},
+                failure_category = 'INTERRUPTED'
+            WHERE status = 'RUNNING'
+            """)
+    int reconcileInterruptedRuns(@Param("completedAt") Instant completedAt);
+
     @Insert("""
             INSERT INTO tourism_sync_scope_states (scope_key, l_dong_regn_cd, l_dong_signgu_cd, content_type_id,
                 last_successful_sync_at, last_successful_run_id)

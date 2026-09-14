@@ -9,6 +9,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import kr.hankkitravel.tourism.model.TourismSyncCounters;
 import kr.hankkitravel.tourism.model.TourismSyncRun;
 import kr.hankkitravel.tourism.model.TourismSyncBatchResult;
@@ -53,6 +54,73 @@ class TourismAdminSyncServiceTest {
         executor.runNext();
         verify(sync).synchronize(TourismSyncScope.fromKey("JEJU_CITY_RESTAURANT"), 7);
         assertThat(service.request("INVALID_SCOPE").code()).isEqualTo("INVALID_SCOPE");
+    }
+
+    @Test void budgetLookupFailureReleasesSingleFlightForTheNextScopeAndAllRequest() {
+        var sync = mock(TourismSyncService.class);
+        var runs = mock(TourismSyncMapper.class);
+        var executor = new DeferredExecutor();
+        when(runs.sumRemoteCallCount(any(), any())).thenThrow(new IllegalStateException("db unavailable"))
+                .thenReturn(0, 0, 0, 0, 0);
+        var service = new TourismAdminSyncService(sync, runs,
+                new TourismAdminSyncSettings(true, 10, ZoneId.of("Asia/Seoul")), executor);
+
+        assertThat(service.request("JEJU_CITY_ATTRACTION").code()).isEqualTo("SYNC_DISPATCH_FAILED");
+        assertThat(service.request("GYEONGJU_LODGING").accepted()).isTrue();
+        executor.runNext();
+        assertThat(service.request(TourismSyncScope.ALL_MVP_SCOPES_KEY).accepted()).isTrue();
+        assertThat(executor.tasks).hasSize(1);
+    }
+
+    @Test void rejectedExecutorAndExhaustedBudgetBothReleaseSingleFlight() {
+        var sync = mock(TourismSyncService.class);
+        var runs = mock(TourismSyncMapper.class);
+        when(runs.sumRemoteCallCount(any(), any())).thenReturn(0);
+        var deferred = new DeferredExecutor();
+        Executor rejectsOnce = new Executor() {
+            private boolean rejected;
+            @Override public void execute(Runnable command) {
+                if (!rejected) {
+                    rejected = true;
+                    throw new RejectedExecutionException("full");
+                }
+                deferred.execute(command);
+            }
+        };
+        var rejecting = new TourismAdminSyncService(sync, runs,
+                new TourismAdminSyncSettings(true, 10, ZoneId.of("Asia/Seoul")), rejectsOnce);
+
+        assertThat(rejecting.request("JEJU_CITY_ATTRACTION").code()).isEqualTo("SYNC_ALREADY_RUNNING");
+        assertThat(rejecting.request("GYEONGJU_LODGING").accepted()).isTrue();
+
+        when(runs.sumRemoteCallCount(any(), any())).thenReturn(10, 0);
+        var executor = new DeferredExecutor();
+        var exhausted = new TourismAdminSyncService(sync, runs,
+                new TourismAdminSyncSettings(true, 10, ZoneId.of("Asia/Seoul")), executor);
+        assertThat(exhausted.request("JEJU_CITY_ATTRACTION").code()).isEqualTo("CALL_BUDGET_EXHAUSTED");
+        assertThat(exhausted.request("GYEONGJU_LODGING").accepted()).isTrue();
+    }
+
+    @Test void unexpectedSubmitFailureAlsoReleasesSingleFlightBeforeAnyWorkerStarts() {
+        var sync = mock(TourismSyncService.class);
+        var runs = mock(TourismSyncMapper.class);
+        when(runs.sumRemoteCallCount(any(), any())).thenReturn(0);
+        var deferred = new DeferredExecutor();
+        Executor failsOnce = new Executor() {
+            private boolean failed;
+            @Override public void execute(Runnable command) {
+                if (!failed) {
+                    failed = true;
+                    throw new IllegalStateException("executor unavailable");
+                }
+                deferred.execute(command);
+            }
+        };
+        var service = new TourismAdminSyncService(sync, runs,
+                new TourismAdminSyncSettings(true, 10, ZoneId.of("Asia/Seoul")), failsOnce);
+
+        assertThat(service.request("JEJU_CITY_ATTRACTION").code()).isEqualTo("SYNC_DISPATCH_FAILED");
+        assertThat(service.request("GYEONGJU_LODGING").accepted()).isTrue();
     }
 
     @Test void overviewReturnsAllNineScopesAndOnlySanitizedFailureCategories() {
