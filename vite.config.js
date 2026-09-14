@@ -17,7 +17,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallbackDenylist: [/^\/actuator/, /^\/api/],
-        // Health and all API responses remain network-only.
+        // Health and all API responses remain network-only; /api/tourism/live/** is never a runtime-cache candidate.
         runtimeCaching: [],
       },
     }),
