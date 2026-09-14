@@ -18,7 +18,7 @@ class ModuleBoundaryTest {
             "shared", Set.of(), "foundation", Set.of("shared"),
             "identity", Set.of("shared"), "profile", Set.of("shared", "identity"),
             "tourism", Set.of("shared"), "restaurant", Set.of("shared", "tourism"),
-            "nutrition", Set.of("shared"), "transit", Set.of("shared"),
+            "nutrition", Set.of("shared", "tourism"), "transit", Set.of("shared"),
             "trip", Set.of("shared", "profile"));
 
     private static String module(JavaClass type) {
@@ -58,7 +58,7 @@ class ModuleBoundaryTest {
                 .importPackages("kr.hankkitravel");
         BOUNDARIES.check(production);
         assertThat(production.stream().map(ModuleBoundaryTest::module).filter(s -> !s.isEmpty()).collect(java.util.stream.Collectors.toSet()))
-                .contains("shared", "foundation", "identity", "profile", "tourism", "restaurant", "transit", "trip");
+                .contains("shared", "foundation", "identity", "profile", "tourism", "restaurant", "nutrition", "transit", "trip");
     }
 
     @Test void noModuleCycles() {
@@ -88,17 +88,19 @@ class ModuleBoundaryTest {
         }
     }
 
-    @Test void nutritionHasAnExplicitDeferredContract() throws Exception {
+    @Test void nutritionHasAnExplicitLiveContract() throws Exception {
         assertThat(java.nio.file.Files.readString(java.nio.file.Path.of("src/main/java/kr/hankkitravel/nutrition/package-info.java")))
-                .contains("P2.1", "shared");
+                .contains("런타임", "영속");
     }
 
     @Test void eachMapperAccessesOnlyItsOwnedTables() throws Exception {
-        var ownership = Map.of(
-                "foundation_metadata", "foundation", "users", "identity", "guests", "identity",
-                "family_profiles", "profile", "family_members", "profile",
-                "tourism_places", "tourism", "tourism_sync_runs", "tourism",
-                "tourism_sync_scope_states", "tourism", "restaurants", "restaurant", "trips", "trip");
+        var ownership = Map.ofEntries(
+                Map.entry("foundation_metadata", "foundation"), Map.entry("users", "identity"),
+                Map.entry("guests", "identity"), Map.entry("family_profiles", "profile"),
+                Map.entry("family_members", "profile"), Map.entry("tourism_places", "tourism"),
+                Map.entry("tourism_sync_runs", "tourism"), Map.entry("tourism_sync_scope_states", "tourism"),
+                Map.entry("restaurants", "restaurant"), Map.entry("trips", "trip"),
+                Map.entry("nutrition_foods", "nutrition"), Map.entry("nutrition_import_runs", "nutrition"));
         var tablePattern = java.util.regex.Pattern.compile("(?i)\\b(?:FROM|INTO|UPDATE|JOIN)\\s+([a-z_]+)");
         var production = new ClassFileImporter().withImportOption(new ImportOption.DoNotIncludeTests())
                 .importPackages("kr.hankkitravel");
@@ -127,6 +129,6 @@ class ModuleBoundaryTest {
                 assertThat(found).as(method.toString()).isTrue();
             }
         }
-        assertThat(mapperCount).isEqualTo(11);
+        assertThat(mapperCount).isEqualTo(14);
     }
 }

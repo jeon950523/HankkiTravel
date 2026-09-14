@@ -9,7 +9,7 @@ spring:
   config:
     import: optional:file:../.env.local[.properties]
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:hankki_travel}?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:hankki_planb}?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     hikari:
@@ -42,6 +42,8 @@ hankki:
       password: ${ADMIN_SYNC_PASSWORD:}
       daily-call-budget: ${TOURISM_SYNC_DAILY_CALL_BUDGET:0}
       operation-zone: ${TOURISM_SYNC_OPERATION_ZONE:Asia/Seoul}
+  tourism-live:
+    max-page-size: ${TOURISM_LIVE_MAX_PAGE_SIZE:30}
   integrations:
     tour-api-base-url: https://apis.data.go.kr/B551011/KorService2
     kakao-base-url: https://dapi.kakao.com

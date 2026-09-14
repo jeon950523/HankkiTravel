@@ -9,6 +9,7 @@
     <mybatis-starter.version>4.1.0</mybatis-starter.version>
     <flyway.version>12.4.0</flyway.version><mysql.version>9.7.0</mysql.version>
     <lombok.version>1.18.46</lombok.version><h2.version>2.4.240</h2.version>
+    <apache-poi.version>5.4.1</apache-poi.version>
     <excluded.test.tags>live,mysql</excluded.test.tags>
   </properties>
   <dependencies>
@@ -20,6 +21,7 @@
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-flyway</artifactId><version>4.1.1</version></dependency>
     <dependency><groupId>org.flywaydb</groupId><artifactId>flyway-mysql</artifactId><version>${flyway.version}</version></dependency>
     <dependency><groupId>com.mysql</groupId><artifactId>mysql-connector-j</artifactId><version>${mysql.version}</version><scope>runtime</scope></dependency>
+    <dependency><groupId>org.apache.poi</groupId><artifactId>poi-ooxml</artifactId><version>${apache-poi.version}</version></dependency>
     <dependency><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><version>${lombok.version}</version><optional>true</optional></dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><version>4.1.1</version><scope>test</scope></dependency>
     <dependency><groupId>com.h2database</groupId><artifactId>h2</artifactId><version>${h2.version}</version><scope>test</scope></dependency>
@@ -28,6 +30,7 @@
     <dependency><groupId>org.testcontainers</groupId><artifactId>testcontainers-junit-jupiter</artifactId><version>2.0.5</version><scope>test</scope></dependency>
   </dependencies>
   <build><plugins>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.15.0</version><configuration><proc>full</proc></configuration></plugin>
     <plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId><version>4.1.1</version></plugin>
     <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.5.6</version><configuration><excludedGroups>${excluded.test.tags}</excludedGroups></configuration></plugin>
   </plugins></build>

@@ -21,6 +21,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 public class SecurityConfiguration {
     private static final String ADMIN_SYNC_PATH = "/api/admin/tourism-sync/";
+    private static final String LIVE_TOURISM_PATH = "/api/tourism/live/**";
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -33,8 +34,13 @@ public class SecurityConfiguration {
         adminCors.setAllowedOrigins(List.of(webBaseUrl));
         adminCors.setAllowedMethods(List.of("GET", "POST"));
         adminCors.setAllowedHeaders(List.of("Accept", "Content-Type", "Authorization"));
+        var liveTourismCors = new CorsConfiguration();
+        liveTourismCors.setAllowedOrigins(List.of(webBaseUrl));
+        liveTourismCors.setAllowedMethods(List.of("GET"));
+        liveTourismCors.setAllowedHeaders(List.of("Accept", "Content-Type"));
         var source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/actuator/health/**", healthCors);
+        source.registerCorsConfiguration(LIVE_TOURISM_PATH, liveTourismCors);
         source.registerCorsConfiguration("/api/admin/tourism-sync/**", adminCors);
         AuthenticationEntryPoint adminEntryPoint = (request, response, exception) -> {
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
@@ -62,6 +68,7 @@ public class SecurityConfiguration {
                         }))
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/api/admin/tourism-sync/**"))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.GET, LIVE_TOURISM_PATH).permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/admin/tourism-sync/status")
                         .hasRole("TOURISM_SYNC_OPERATOR")
