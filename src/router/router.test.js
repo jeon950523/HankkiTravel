@@ -16,10 +16,9 @@ async function render(path) {
 describe('제품 경로와 실제 상태를 구분하는 Shell', () => {
  it.each([
   ['/', '좋은 한 끼가,'], ['/login', '카카오로 계속하기'],
-  ['/profiles', '가족의 여행 이야기를 기다려요'], ['/profiles/new', '지금은 입력하거나 저장할 수 없어요.'],
-  ['/travel/new', '어디로, 얼마 동안'], ['/auth/callback', '로그인 연결을'],
-  ['/admin/sync', '관광 데이터 동기화 운영'],
-  ['/unknown', '이 페이지를'],
+  ['/profiles', '가족의 여행 이야기를 기다려요'], ['/profiles/new', '프로필 저장'],
+  ['/travel/new', '이번 한 끼를'], ['/auth/callback', '로그인 연결을'],
+  ['/admin/sync', '관광 데이터 동기화 운영'], ['/unknown', '이 페이지를'],
  ])('%s 렌더와 제목 계약', async (path, text) => {
   const { html, router } = await render(path)
   expect(html).toContain(text)
@@ -30,10 +29,16 @@ describe('제품 경로와 실제 상태를 구분하는 Shell', () => {
   expect(html).not.toContain('actuator')
   expect(router.currentRoute.value.meta.title).toBeTruthy()
  })
- it('Home의 두 CTA는 서로 다른 여행 시작 의도를 전달한다', async () => {
+ it('Home의 두 CTA는 Guest 시작을 거쳐 서로 다른 여행 시작 의도를 전달한다', async () => {
   const {html} = await render('/')
-  expect(html).toContain('/travel/new?start=meal')
-  expect(html).toContain('/travel/new?start=place')
+  expect(html).toContain('한 끼부터 찾기')
+  expect(html).toContain('장소부터 찾기')
+  expect(html).toContain('로그인 없이 가족 프로필')
+ })
+ it('프로필 수정 경로는 편집 화면을 재사용한다', async () => {
+  const {html, router} = await render('/profiles/42/edit')
+  expect(router.currentRoute.value.name).toBe('profile-edit')
+  expect(html).toContain('우리 가족의 조건을')
  })
  it('OAuth 버튼은 disabled이며 외부 인증 링크가 없다', async () => {
   const {html} = await render('/login')

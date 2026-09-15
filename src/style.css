@@ -205,3 +205,53 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   .admin-access .action-button { width: auto; min-width: 220px; }
   .admin-scope-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+.profile-list, .recommendation-results { display: grid; gap: 16px; margin-top: 30px; }
+.profile-list + .action-button { margin-top: 20px; }
+.profile-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.profile-card h2 { font-size: 20px; }
+.profile-card p:not(.card-kicker) { color: var(--color-secondary); font-size: 14px; margin-top: 6px; }
+.card-kicker { color: var(--color-accent-text) !important; font-size: 12px !important; font-weight: 650; margin-bottom: 6px; }
+.editor-page { max-width: 700px; }
+.profile-form { display: grid; gap: 22px; margin-top: 28px; }
+.profile-form > label, .form-grid > label, .wide-field { display: grid; gap: 8px; color: var(--color-olive); font-size: 14px; font-weight: 650; }
+.profile-form input:not([type='checkbox']):not([type='radio']), .profile-form select, .travel-fields input, .travel-fields select, .wide-field input { width: 100%; min-height: 48px; padding: 10px 12px; color: var(--color-charcoal); background: var(--color-surface); border: 1px solid var(--color-border-control); border-radius: 10px; }
+.profile-form legend { margin-bottom: 12px; }
+.compact-choices, .caution-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.compact-choices label, .caution-grid label, .check-label { min-height: 46px; display: flex !important; align-items: center; gap: 9px; padding: 10px 12px; border: 1px solid var(--color-sand); border-radius: 10px; color: var(--color-charcoal) !important; font-weight: 500 !important; }
+.compact-choices input, .caution-grid input, .check-label input { width: 18px; height: 18px; margin: 0; accent-color: var(--color-olive); }
+.form-grid { display: grid; gap: 14px; }
+.members-section { display: grid; gap: 14px; }
+.section-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.member-form { display: grid; gap: 16px; padding: 18px 0; border-top: 1px solid var(--color-sand); }
+.member-form h3 { font-size: 16px; }
+.small-button, .text-button { min-height: 42px; padding: 8px 12px; border: 0; color: var(--color-olive); background: var(--color-soft); border-radius: 10px; font-weight: 650; }
+.text-button { background: transparent; text-decoration: underline; text-underline-offset: 4px; }
+.profile-form > .action-button { width: 100%; }
+.travel-fields { margin-top: 26px; }
+.wide-field { margin-top: 14px; }
+.input-note, .result-notice { color: var(--color-secondary); font-size: 13px; line-height: 1.7; }
+.travel-options .input-note { margin-top: 16px; }
+.travel-preview .action-button { display: flex; }
+.recommendation-results { margin-bottom: 30px; }
+.result-notice { margin-top: 10px; }
+.perspective-card { display: grid; gap: 16px; }
+.evidence-badge { flex: 0 0 auto; padding: 5px 8px; color: var(--color-olive); background: var(--color-soft); border-radius: 999px; font-size: 11px; font-weight: 650; }
+.recommendation-card { display: grid; gap: 10px; padding-top: 18px; border-top: 1px solid var(--color-sand); }
+.recommendation-card h4 { font-size: 18px; line-height: 1.35; }
+.address { color: var(--color-secondary); font-size: 13px; }
+.recommendation-card dl { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0; }
+.recommendation-card dl div { padding: 10px; background: var(--color-soft); border-radius: 10px; }
+.recommendation-card dt { color: var(--color-secondary); font-size: 11px; }
+.recommendation-card dd { margin: 2px 0 0; color: var(--color-olive); font-size: 18px; font-weight: 750; }
+.reason-grid { display: grid; gap: 10px; }
+.reason-grid div { padding: 12px; border-left: 3px solid var(--color-sage); background: #fbfaf5; }
+.reason-grid h5 { margin: 0; color: var(--color-olive); font-size: 13px; }
+.reason-grid p, .nutrition-line, .transport-line { color: var(--color-secondary); font-size: 13px; line-height: 1.65; margin-top: 4px; }
+.nutrition-line { color: var(--color-olive); }
+.source-line { color: var(--color-secondary); font-size: 12px; }
+@media (min-width: 640px) {
+  .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .profile-card { padding: 26px; }
+  .caution-grid { grid-template-columns: repeat(3, 1fr); }
+}

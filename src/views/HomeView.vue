@@ -1,7 +1,19 @@
 <script setup>
-import ActionButton from '../components/ActionButton.vue'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import AppIcon from '../components/AppIcon.vue'
 import JourneyArtwork from '../components/JourneyArtwork.vue'
+import StatusMessage from '../components/StatusMessage.vue'
+import { useGuestStore } from '../stores/guest'
+
+const router = useRouter()
+const guest = useGuestStore()
+const startError = ref('')
+const start = async mode => {
+  startError.value = ''
+  try { await guest.ensureGuest() } catch (error) { startError.value = 'Guest 정보를 준비하지 못했어요. 여행 화면에서 다시 시도해 주세요.' }
+  await router.push({ path: '/travel/new', query: { start: mode } })
+}
 </script>
 <template>
   <section class="home-hero">
@@ -10,10 +22,11 @@ import JourneyArtwork from '../components/JourneyArtwork.vue'
       <h1 tabindex="-1">좋은 한 끼가,<br />좋은 여행을 만든다.</h1>
       <p class="hero-description">먹고 싶은 한 끼, 가보고 싶은 곳.<br />우리 가족의 여행을 거기서 시작해요.</p>
       <div class="hero-actions">
-        <ActionButton :to="{ path: '/travel/new', query: { start: 'meal' } }"><AppIcon name="meal" />한 끼부터 찾기<AppIcon name="arrow" /></ActionButton>
-        <ActionButton :to="{ path: '/travel/new', query: { start: 'place' } }" variant="secondary"><AppIcon name="place" />장소부터 찾기<AppIcon name="arrow" /></ActionButton>
+        <button class="action-button button-primary" type="button" :disabled="guest.loading" @click="start('meal')"><AppIcon name="meal" />한 끼부터 찾기<AppIcon name="arrow" /></button>
+        <button class="action-button button-secondary" type="button" :disabled="guest.loading" @click="start('place')"><AppIcon name="place" />장소부터 찾기<AppIcon name="arrow" /></button>
       </div>
-      <p class="quiet-note">지금은 여행의 시작을 미리 둘러볼 수 있어요.</p>
+      <StatusMessage v-if="startError" kind="error" title="여행 시작 정보를 확인해 주세요">{{ startError }}</StatusMessage>
+      <p v-else class="quiet-note">로그인 없이 가족 프로필과 한 끼 추천을 시작할 수 있어요.</p>
     </div>
     <div class="hero-visual"><JourneyArtwork /><p>한 끼를 중심으로, 함께 이어가는 여행</p></div>
   </section>
@@ -25,5 +38,5 @@ import JourneyArtwork from '../components/JourneyArtwork.vue'
       <article><span class="principle-number">03</span><div><h3>우리의 속도로 고르기</h3><p>마지막 선택은 언제나 우리 가족이.</p></div></article>
     </div>
   </section>
-  <section class="family-invitation"><span class="invitation-icon"><AppIcon name="family" /></span><div><h2>누구와 함께 떠나세요?</h2><p>가족 프로필이 여행 준비를 어떻게 돕는지 알아보세요.</p></div><RouterLink to="/profiles" class="text-link">가족 프로필 알아보기<AppIcon name="arrow" /></RouterLink></section>
+  <section class="family-invitation"><span class="invitation-icon"><AppIcon name="family" /></span><div><h2>누구와 함께 떠나세요?</h2><p>가족 프로필에 식사와 이동 조건을 담아볼 수 있어요.</p></div><RouterLink to="/profiles" class="text-link">가족 프로필 알아보기<AppIcon name="arrow" /></RouterLink></section>
 </template>

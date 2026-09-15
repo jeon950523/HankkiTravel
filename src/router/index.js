@@ -13,6 +13,7 @@ export const routes = [
   { path: '/login', name: 'login', component: LoginView, meta: { title: '로그인' } },
   { path: '/profiles', name: 'profiles', component: ProfilesView, meta: { title: '가족 프로필' } },
   { path: '/profiles/new', name: 'profile-new', component: ProfileEditorView, meta: { title: '새 가족 프로필' } },
+  { path: '/profiles/:profileId/edit', name: 'profile-edit', component: ProfileEditorView, meta: { title: '가족 프로필 수정' } },
   { path: '/travel/new', name: 'travel-new', component: TravelStartView, meta: { title: '여행 시작' } },
   { path: '/auth/callback', name: 'auth-callback', component: AuthCallbackView, meta: { title: '로그인 연결 안내' } },
   { path: '/admin/sync', name: 'admin-sync', component: AdminSyncView, meta: { title: '관광 데이터 동기화 운영', standalone: true } },
