@@ -38,7 +38,7 @@ jobs:
       - name: Verify application and database migrations
         env:
           MAVEN_OPTS: -Xmx1g
-        run: ./mvnw -B -ntp -DargLine=-Xmx2g clean verify
+        run: ./mvnw -B -ntp -DargLine="-Xmx3g -Dspring.test.context.cache.maxSize=1" -DreuseForks=false clean verify
 
   publish-image:
     name: Publish verified image to GHCR
