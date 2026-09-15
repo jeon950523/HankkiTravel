@@ -56,7 +56,7 @@ jobs:
               exit 1
             fi
           done
-      - name: Inspect pending migrations
-        run: ./mvnw -B -ntp flyway:info flyway:validate
       - name: Apply pending migrations
         run: ./mvnw -B -ntp flyway:migrate
+      - name: Verify applied migrations
+        run: ./mvnw -B -ntp flyway:validate flyway:info
