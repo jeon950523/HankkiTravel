@@ -10,4 +10,4 @@ resources:
 images:
   - name: ghcr.io/jeon950523/hankki_travel_back
     newName: ghcr.io/jeon950523/hankki_travel_back
-    newTag: sha-5723ce7436422eec465f919f0307b0b4580dd1e3
+    newTag: sha-07a4a7d413d84b47187779d491b83362e7a8d528
