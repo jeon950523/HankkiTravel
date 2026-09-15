@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: hankki
+resources:
+  - configmap.yaml
+  - deployment.yaml
+  - service.yaml
+images:
+  - name: ghcr.io/jeon950523/hankki_travel_back
+    newName: ghcr.io/jeon950523/hankki_travel_back
+    newTag: sha-07a4a7d413d84b47187779d491b83362e7a8d528

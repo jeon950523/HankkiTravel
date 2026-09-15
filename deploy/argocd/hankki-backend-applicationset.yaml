@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: hankki-travel-api
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - environment: production
+  template:
+    metadata:
+      name: hankki-travel-api-{{environment}}
+      labels:
+        app.kubernetes.io/part-of: hankki-travel
+    spec:
+      project: default
+      source:
+        repoURL: git@github.com:jeon950523/hankki_travel_back.git
+        targetRevision: main
+        path: deploy/k8s
+      destination:
+        server: <INSTRUCTOR_CONFIRM_DESTINATION_SERVER>
+        namespace: hankki
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - PruneLast=true
