@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hankki-travel-api
+  labels:
+    app.kubernetes.io/name: hankki-travel-api
+    app.kubernetes.io/part-of: hankki-travel
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: hankki-travel-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

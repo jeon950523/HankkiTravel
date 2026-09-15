@@ -1,0 +1,12 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+target/
+docs/
+k8s/
+argocd/
+*.log
+*.pem
+*.key
