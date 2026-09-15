@@ -5,8 +5,7 @@
 !.env.example
 target/
 docs/
-k8s/
-argocd/
+deploy/
 *.log
 *.pem
 *.key

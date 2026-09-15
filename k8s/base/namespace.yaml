@@ -1,6 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: hankki
-  labels:
-    app.kubernetes.io/part-of: hankki-travel
