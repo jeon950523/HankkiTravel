@@ -18,6 +18,8 @@ spec:
         app.kubernetes.io/part-of: hankki-travel
     spec:
       automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       securityContext:
         seccompProfile:
           type: RuntimeDefault

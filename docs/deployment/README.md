@@ -21,7 +21,7 @@
    - `PROD_DB_USERNAME`
    - `PROD_DB_PASSWORD`
 
-4. GHCR 패키지는 클러스터가 pull할 수 있어야 한다. 패키지를 public으로 만들거나, 아래와 같이 클러스터 관리자가 별도 image pull secret을 만든다. 실제 PAT는 명령 기록에 남기지 않는다.
+4. 백엔드 저장소가 private이므로 GHCR image pull secret은 필수다. 클러스터 관리자가 아래와 같이 `ghcr-pull-secret`을 만들고, 실제 PAT는 명령 기록에 남기지 않는다.
 
    ```sh
    kubectl -n hankki create secret docker-registry ghcr-pull-secret \
@@ -30,7 +30,7 @@
      --docker-password=GITHUB_PAT
    ```
 
-   private GHCR를 사용할 때는 `k8s/base/deployment.yaml`의 Pod spec에 `imagePullSecrets`로 `ghcr-pull-secret`을 추가한다. public 패키지는 추가 설정 없이 pull할 수 있다.
+   `k8s/base/deployment.yaml`은 이 Secret을 `imagePullSecrets`로 참조한다. 이 Secret이 없으면 Pod는 의도적으로 image pull 단계에서 시작되지 않는다.
 
 ## Kubernetes와 Argo CD
 
@@ -40,6 +40,12 @@
 - Argo CD에는 GitHub deploy key의 public key를 저장소 deploy key로 등록하고, private key는 Argo CD repository credential에만 등록한다. 키는 Git에 넣지 않는다.
 - ApplicationSet CRD가 있는 클러스터 관리자가 `argocd/applicationset.yaml`을 적용한다. ApplicationSet은 `main`의 `k8s/base`를 `hankki` namespace에 자동 동기화한다.
 
+
+## GitHub → Argo CD 웹훅
+
+Argo CD 공개 endpoint에는 GitHub webhook을 한 개만 등록한다. URL은 `https://argocd.meerkat.p-e.kr/api/webhook`, Content type은 `application/json`이며 이벤트는 `Pushes`와 `Packages`를 선택한다.
+
+등록 전에 클러스터 관리자가 `argocd` namespace의 `argocd-secret`에 `webhook.github.secret`을 설정해야 한다. 이 값은 GitHub webhook secret과 정확히 같아야 하며, 저장소나 ApplicationSet 파일에는 넣지 않는다. ApplicationSet과 GitHub webhook을 관리자가 반영하기 전에는 Argo CD의 3분 폴링만 동기화 경로로 사용된다.
 ## 운영 DB 실행
 
 Actions 탭에서 `Production DB Migration`을 수동 실행하고 confirmation에 정확히 `MIGRATE_PRODUCTION`을 입력한다. 이 작업은 `info`, `validate`, `migrate` 순으로 실행하며 Flyway의 clean은 비활성 상태다.
