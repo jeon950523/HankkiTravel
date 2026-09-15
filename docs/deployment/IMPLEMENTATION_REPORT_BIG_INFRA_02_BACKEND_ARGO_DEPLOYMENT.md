@@ -12,7 +12,7 @@
 | Backend test | PASS | JDK 21, 86 tests, failures 0, errors 0 |
 | Docker build | PASS | `hankki-travel-api:infra-02` 로컬 빌드 성공 |
 | Local runtime health | PASS | 임시 MySQL에서 Flyway 후 health/readiness/liveness 모두 `UP` |
-| GHCR / CI | PREPARED | 현재 변경 푸시 후 GitHub Actions 검증 대기 |
+| GHCR / CI | PASS | [GitHub Actions 34938093139](https://github.com/jeon950523/hankki_travel_back/actions/runs/34938093139) 성공 |
 | Kubernetes manifests | PASS | `kubectl kustomize deploy/k8s` 및 계약 검사 성공 |
 | Production DB contract | PASS | `hankki_planb`, Flyway V10 success 확인 |
 | ApplicationSet | READY | 전달 파일 생성, 실제 적용은 Argo 선행 조건 대기 |
@@ -21,6 +21,11 @@
 | Nutrition reference | IMPORT_REQUIRED | active rows 0, import runs 0 |
 | Secret audit | PASS | 실제 비밀값·개인키·PAT 미검출 |
 
+## 실제 CI / GHCR 결과
+
+- GitHub Actions: [Backend CI and GHCR run 34938093139](https://github.com/jeon950523/hankki_travel_back/actions/runs/34938093139) — 성공
+- GHCR image: `ghcr.io/jeon950523/hankki_travel_back:sha-758c70e2da54b2f1d5933427c489b45691eda25f`
+- GitOps tag commit: `cc03126 chore: 배포 이미지 태그 갱신`
 ## 배포 구성
 
 - Docker: Java 21 multi-stage build, 고정된 Spring Boot JAR 선택, non-root `spring`(UID 10001), exec-form entrypoint, port 8300
