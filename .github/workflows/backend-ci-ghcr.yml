@@ -93,7 +93,7 @@ jobs:
         env:
           IMAGE_TAG: sha-${{ github.sha }}
         run: |
-          sed -i "s/^  newTag: .*/  newTag: ${IMAGE_TAG}/" k8s/base/kustomization.yaml
+          sed -i "s/^[[:space:]]*newTag: .*/    newTag: ${IMAGE_TAG}/" k8s/base/kustomization.yaml
           if git diff --quiet -- k8s/base/kustomization.yaml; then
             exit 0
           fi
