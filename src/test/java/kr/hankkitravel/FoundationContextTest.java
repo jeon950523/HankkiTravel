@@ -63,4 +63,38 @@ class FoundationContextTest {
         assertThat(authenticated.body()).contains("\"operatorEnabled\":true", "\"dailyCallBudget\":10")
                 .doesNotContain("operator-test-password");
     }
-}
+
+    @Test void guestCanCreateReadAndOwnAFamilyProfileWithoutLogin() throws Exception {
+        var client = HttpClient.newHttpClient();
+        var firstGuest = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/guests"))
+                .POST(HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.ofString());
+        assertThat(firstGuest.statusCode()).isEqualTo(201);
+        var guestIdMatcher = java.util.regex.Pattern.compile("\\\"publicId\\\":\\\"([^\\\"]+)\\\"").matcher(firstGuest.body());
+        assertThat(guestIdMatcher.find()).isTrue();
+        String guestId = guestIdMatcher.group(1);
+        String profilePayload = """
+                {"name":"부모님과 제주","transportMode":"CAR","parkingPreference":"REQUIRED",
+                 "walkingBurdenPreference":"NORMAL","transferPreference":"AVOID","stairsAvoidance":true,
+                 "members":[{"nickname":"엄마","continuousWalkingMinutes":20,"stairsPreference":"AVOID",
+                 "mealCautions":["SODIUM","INGREDIENT_CHECK"]}]}
+                """;
+        var created = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/guests/" + guestId + "/profiles"))
+                .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(profilePayload)).build(),
+                HttpResponse.BodyHandlers.ofString());
+        assertThat(created.statusCode()).isEqualTo(201);
+        assertThat(created.body()).contains("부모님과 제주", "SODIUM", "INGREDIENT_CHECK");
+        var profileIdMatcher = java.util.regex.Pattern.compile("\\\"profileId\\\":(\\d+)").matcher(created.body());
+        assertThat(profileIdMatcher.find()).isTrue();
+        String profileId = profileIdMatcher.group(1);
+        var listed = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/guests/" + guestId + "/profiles"))
+                .build(), HttpResponse.BodyHandlers.ofString());
+        assertThat(listed.statusCode()).isEqualTo(200);
+        assertThat(listed.body()).contains("부모님과 제주");
+        var secondGuest = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/guests"))
+                .POST(HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.ofString());
+        var secondGuestMatcher = java.util.regex.Pattern.compile("\\\"publicId\\\":\\\"([^\\\"]+)\\\"").matcher(secondGuest.body());
+        assertThat(secondGuestMatcher.find()).isTrue();
+        var denied = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/guests/"
+                + secondGuestMatcher.group(1) + "/profiles/" + profileId)).build(), HttpResponse.BodyHandlers.ofString());
+        assertThat(denied.statusCode()).isEqualTo(404);
+    }}

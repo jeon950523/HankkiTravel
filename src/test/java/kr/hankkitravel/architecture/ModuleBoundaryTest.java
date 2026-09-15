@@ -19,6 +19,7 @@ class ModuleBoundaryTest {
             "identity", Set.of("shared"), "profile", Set.of("shared", "identity"),
             "tourism", Set.of("shared"), "restaurant", Set.of("shared", "tourism"),
             "nutrition", Set.of("shared", "tourism"), "transit", Set.of("shared"),
+            "recommendation", Set.of("shared", "profile", "tourism", "transit"),
             "trip", Set.of("shared", "profile"));
 
     private static String module(JavaClass type) {
@@ -58,7 +59,7 @@ class ModuleBoundaryTest {
                 .importPackages("kr.hankkitravel");
         BOUNDARIES.check(production);
         assertThat(production.stream().map(ModuleBoundaryTest::module).filter(s -> !s.isEmpty()).collect(java.util.stream.Collectors.toSet()))
-                .contains("shared", "foundation", "identity", "profile", "tourism", "restaurant", "nutrition", "transit", "trip");
+                .contains("shared", "foundation", "identity", "profile", "tourism", "restaurant", "nutrition", "transit", "recommendation", "trip");
     }
 
     @Test void noModuleCycles() {
@@ -97,7 +98,7 @@ class ModuleBoundaryTest {
         var ownership = Map.ofEntries(
                 Map.entry("foundation_metadata", "foundation"), Map.entry("users", "identity"),
                 Map.entry("guests", "identity"), Map.entry("family_profiles", "profile"),
-                Map.entry("family_members", "profile"), Map.entry("tourism_places", "tourism"),
+                Map.entry("family_members", "profile"), Map.entry("family_member_cautions", "profile"), Map.entry("tourism_places", "tourism"),
                 Map.entry("tourism_sync_runs", "tourism"), Map.entry("tourism_sync_scope_states", "tourism"),
                 Map.entry("restaurants", "restaurant"), Map.entry("trips", "trip"),
                 Map.entry("nutrition_foods", "nutrition"), Map.entry("nutrition_import_runs", "nutrition"));
@@ -129,6 +130,6 @@ class ModuleBoundaryTest {
                 assertThat(found).as(method.toString()).isTrue();
             }
         }
-        assertThat(mapperCount).isEqualTo(14);
+        assertThat(mapperCount).isEqualTo(15);
     }
 }

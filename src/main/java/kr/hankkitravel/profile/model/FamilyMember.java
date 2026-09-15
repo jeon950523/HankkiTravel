@@ -12,13 +12,21 @@ public class FamilyMember {
     private Long profileId;
     private String nickname;
     private int sortOrder;
+    private int continuousWalkingMinutes;
+    private String stairsPreference;
     private Instant createdAt;
     private Instant updatedAt;
 
-    public FamilyMember(FamilyProfileId profileId, String nickname, int sortOrder) {
-        if (nickname == null || nickname.isBlank() || sortOrder < 0) throw new IllegalArgumentException("구성원 이름과 순서를 확인하세요.");
+    public FamilyMember(FamilyProfileId profileId, String nickname, int sortOrder, int continuousWalkingMinutes,
+            String stairsPreference) {
+        if (nickname == null || nickname.isBlank() || sortOrder < 0 || continuousWalkingMinutes < 0
+                || stairsPreference == null || stairsPreference.isBlank()) {
+            throw new IllegalArgumentException("구성원 정보와 순서를 확인하세요.");
+        }
         this.profileId = java.util.Objects.requireNonNull(profileId).value();
-        this.nickname = nickname;
+        this.nickname = nickname.trim();
         this.sortOrder = sortOrder;
+        this.continuousWalkingMinutes = continuousWalkingMinutes;
+        this.stairsPreference = stairsPreference;
     }
 }

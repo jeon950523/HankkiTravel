@@ -20,4 +20,10 @@ public interface GuestMapper {
             FROM guests WHERE id = #{id}
             """)
     Guest findById(long id);
+
+    @Select("""
+            SELECT id, public_id AS publicId, created_at AS createdAt, updated_at AS updatedAt
+            FROM guests WHERE public_id = #{publicId}
+            """)
+    Guest findByPublicId(String publicId);
 }
