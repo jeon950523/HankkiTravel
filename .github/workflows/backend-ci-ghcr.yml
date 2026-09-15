@@ -36,7 +36,9 @@ jobs:
           java-version: '21'
           cache: maven
       - name: Verify application and database migrations
-        run: ./mvnw -B -ntp clean verify
+        env:
+          MAVEN_OPTS: -Xmx1g
+        run: ./mvnw -B -ntp -DargLine=-Xmx2g clean verify
 
   publish-image:
     name: Publish verified image to GHCR
