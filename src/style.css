@@ -304,6 +304,15 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 .live-card .reason-grid h4 { margin: 0; color: var(--color-olive); font-size: 13px; }
 .live-card .action-button { width: 100%; }
 .next-actions { display: grid; gap: 10px; }
+.focus-actions, .focus-search, .contact-actions { display: grid; gap: 10px; }
+.focus-search { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
+.focus-selection { display: grid; gap: 5px; padding: 14px; border-radius: 12px; background: var(--color-soft); }
+.focus-selection span { color: var(--color-secondary); font-size: 13px; }
+.focus-selection .text-button { justify-self: start; }
+.dimension-list { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.dimension-list li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 10px; border-bottom: 1px solid var(--color-sand); font-size: 13px; }
+.dimension-list span { color: var(--color-secondary); }
+.dimension-list strong { color: var(--color-olive); }
 .timeline { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
 .timeline > li { position: relative; padding-left: 18px; border-left: 2px solid var(--color-sage); }
 .timeline > li::before { content: ''; position: absolute; top: 24px; left: -7px; width: 12px; height: 12px; border-radius: 50%; background: var(--color-terracotta); }

@@ -18,7 +18,8 @@ const cautions = [
   ['SODIUM', '나트륨 참고'], ['SUGAR', '당류 참고'], ['CARBOHYDRATE', '탄수화물 참고'],
   ['SPICY', '매운맛 참고'], ['INGREDIENT_CHECK', '원재료 확인 필요'], ['NONE', '특별히 없음'],
 ]
-const newMember = () => ({ nickname: '', continuousWalkingMinutes: 30, stairsPreference: 'NEUTRAL', mealCautions: ['NONE'] })
+const newMember = () => ({ nickname: '', continuousWalkingMinutes: 30, stairsPreference: 'NEUTRAL', mealCautions: ['NONE'],
+  bloodSugarCare: false, allergenText: '', avoidedFoodText: '' })
 const form = reactive({
   name: '', transportMode: 'CAR', parkingPreference: 'NO_PREFERENCE', walkingBurdenPreference: 'NORMAL',
   transferPreference: 'NO_PREFERENCE', stairsAvoidance: false, members: [newMember()],
@@ -31,9 +32,14 @@ const replaceForm = source => {
   form.transferPreference = source.transferPreference
   form.stairsAvoidance = source.stairsAvoidance
   form.members = source.members.map(member => ({ nickname: member.nickname, continuousWalkingMinutes: member.continuousWalkingMinutes,
-    stairsPreference: member.stairsPreference, mealCautions: [...member.mealCautions] }))
+    stairsPreference: member.stairsPreference, mealCautions: [...member.mealCautions], bloodSugarCare: Boolean(member.bloodSugarCare),
+    allergenText: (member.allergenRestrictions || []).join(', '), avoidedFoodText: (member.avoidedFoods || []).join(', ') }))
 }
-const normalizeMember = member => ({ ...member, mealCautions: member.mealCautions.includes('NONE') ? ['NONE'] : member.mealCautions })
+const splitRestrictions = value => value.split(',').map(item => item.trim()).filter(Boolean)
+const normalizeMember = member => ({ nickname: member.nickname, continuousWalkingMinutes: member.continuousWalkingMinutes,
+  stairsPreference: member.stairsPreference, bloodSugarCare: member.bloodSugarCare,
+  mealCautions: member.mealCautions.includes('NONE') ? ['NONE'] : member.mealCautions,
+  allergenRestrictions: splitRestrictions(member.allergenText), avoidedFoods: splitRestrictions(member.avoidedFoodText) })
 const toggleCaution = (member, value) => {
   if (value === 'NONE' && member.mealCautions.includes('NONE')) member.mealCautions = ['NONE']
   else if (value !== 'NONE') member.mealCautions = member.mealCautions.filter(item => item !== 'NONE')
@@ -84,6 +90,8 @@ onMounted(async () => {
           <div class="section-row"><h3>구성원 {{ index + 1 }}</h3><button v-if="form.members.length > 1" type="button" class="text-button" @click="removeMember(index)">삭제</button></div>
           <div class="form-grid"><label>부르는 이름<input v-model.trim="member.nickname" required maxlength="100" placeholder="예: 엄마" /></label><label>연속 보행(분)<input v-model.number="member.continuousWalkingMinutes" type="number" required min="0" max="480" /></label><label>계단 선호<select v-model="member.stairsPreference"><option value="NEUTRAL">상관없음</option><option value="AVOID">피하고 싶어요</option></select></label></div>
           <fieldset><legend>식사할 때 참고할 점</legend><div class="caution-grid"><label v-for="[value, label] in cautions" :key="value"><input v-model="member.mealCautions" type="checkbox" :value="value" @change="toggleCaution(member, value)" />{{ label }}</label></div></fieldset>
+          <label class="check-label"><input v-model="member.bloodSugarCare" type="checkbox" />혈당 관리를 고려하고 있어요</label>
+          <div class="form-grid"><label>알레르기 주의 재료<input v-model.trim="member.allergenText" maxlength="500" placeholder="예: 땅콩, 새우" /><span class="input-note">쉼표로 구분해 주세요. 공개 정보가 없으면 안전하다고 판단하지 않아요.</span></label><label>피하고 싶은 음식/재료<input v-model.trim="member.avoidedFoodText" maxlength="500" placeholder="예: 고수, 내장" /><span class="input-note">명시적 메뉴 충돌이 확인될 때만 제외에 사용해요.</span></label></div>
         </article>
       </section>
       <StatusMessage v-if="error" kind="error" title="저장하지 못했어요">{{ error }}</StatusMessage>

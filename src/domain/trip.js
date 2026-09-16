@@ -1,7 +1,7 @@
 export const MEAL_TYPES = ['BREAKFAST', 'LUNCH', 'DINNER']
 export const MEAL_LABELS = { BREAKFAST: '아침', LUNCH: '점심', DINNER: '저녁' }
 export const SLOT_LABELS = {
-  BREAKFAST: '아침', MORNING_ACTIVITY: '오전 관광', LUNCH: '점심',
+  DAY_FOCUS: '오늘의 중심 장소', BREAKFAST: '아침', MORNING_ACTIVITY: '오전 관광', LUNCH: '점심',
   AFTERNOON_ACTIVITY: '오후 관광', DINNER: '저녁', STAY: '숙소',
 }
 

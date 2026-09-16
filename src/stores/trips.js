@@ -7,7 +7,7 @@ const slotKey = (trip, slot) => `${trip}:${slot}`
 
 export const useTripsStore = defineStore('trips', {
   state: () => ({
-    detail: null, restaurantResults: {}, placeResults: {}, planners: {},
+    detail: null, restaurantResults: {}, placeResults: {}, focusResults: {}, selectedFocus: {}, planners: {},
     loading: false, actionLoading: '', error: null,
   }),
   actions: {
@@ -36,6 +36,32 @@ export const useTripsStore = defineStore('trips', {
         const result = await requestJson(`${pathFor(guest, trip)}/meal-slots/${encodeURIComponent(slot)}/recommendations`, { method: 'POST' })
         this.restaurantResults[slotKey(trip, slot)] = result
         return result
+      })
+    },
+    async recommendFocus(guest, trip, dayNumber) {
+      return this.run(`focus:${dayNumber}`, async () => {
+        const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/focus-recommendations`, { method: 'POST' })
+        this.focusResults[dayKey(trip, dayNumber)] = result
+        return result
+      })
+    },
+    async searchFocus(guest, trip, dayNumber, keyword) {
+      return this.run(`focus-search:${dayNumber}`, async () => {
+        const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/focus-search?keyword=${encodeURIComponent(keyword)}`)
+        this.focusResults[dayKey(trip, dayNumber)] = result
+        return result
+      })
+    },
+    async selectFocus(guest, trip, dayNumber, candidate) {
+      const selected = await this.selectPlace(guest, trip, dayNumber, 'DAY_FOCUS', candidate.contentId)
+      if (selected) this.selectedFocus[dayKey(trip, dayNumber)] = candidate
+      return selected
+    },
+    async clearFocus(guest, trip, dayNumber) {
+      return this.run(`focus-clear:${dayNumber}`, async () => {
+        await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/place-anchors/DAY_FOCUS`, { method: 'DELETE' })
+        delete this.selectedFocus[dayKey(trip, dayNumber)]
+        delete this.planners[dayKey(trip, dayNumber)]
       })
     },
     async selectMeal(guest, trip, slot, contentId) {

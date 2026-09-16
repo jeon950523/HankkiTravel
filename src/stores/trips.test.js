@@ -26,6 +26,14 @@ it('updates restaurant anchor in memory without persisting API results', async (
   expect(localStorage.length).toBe(0)
 })
 
+it('keeps DAY_FOCUS live detail only in memory', async () => {
+  fetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({ publicId: 'focus', slotType: 'DAY_FOCUS', contentId: '456' }) })
+  const store = useTripsStore()
+  await store.selectFocus('guest', 'trip', 1, { contentId: '456', title: '성산일출봉' })
+  expect(store.selectedFocus['trip:1'].title).toBe('성산일출봉')
+  expect(localStorage.length).toBe(0)
+})
+
 it('surfaces a tourism outage and clears loading state', async () => {
   fetch.mockResolvedValue({ ok: false, status: 503, json: async () => ({ code: 'CURRENT_TOURISM_DATA_UNAVAILABLE' }) })
   const store = useTripsStore()
