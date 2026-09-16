@@ -7,7 +7,7 @@
 - Java 21
 - Maven Wrapper
 - 애플리케이션 포트: `8300`
-- Production backend domain: `https://api.hankki.kro.kr`
+- Production backend domain: `https://api.hankki.r-e.kr`
 - Production frontend origin (CORS): `https://hankki.kro.kr`
 
 `WEB_BASE_URL`로 허용 origin을 설정합니다. 개발 기본값은 `http://localhost:5175`이며 Production에서는 반드시 `https://hankki.kro.kr`로 설정합니다.
@@ -43,7 +43,9 @@ Submission Production은 TourAPI Live First를 사용하며 KTO 관광 원본 pa
 - Backend repository: `https://github.com/jeon950523/hankki_travel_back`
 - Branch: `main`
 - Internal application port: `8300`
-- External backend domain: `api.hankki.kro.kr`
+- External backend domain: `api.hankki.r-e.kr`
 - Allowed frontend origin: `https://hankki.kro.kr`
 
-Jenkins, Argo, Kubernetes Ingress/TLS, DNS, Production DB credential은 제공된 인프라 템플릿과 운영 입력이 필요합니다. 현재 이 저장소에는 해당 템플릿을 추정해 추가하지 않습니다.
+Backend GitHub Actions가 검증 후 GHCR에 full SHA 이미지 태그를 발행하고, 별도 Private GitOps 저장소 `jeon950523/k8s-manifests-hankki`의 `backend/deployment.yaml`만 갱신합니다. Kubernetes Deployment, Service, ConfigMap, HTTPRoute의 현재 정본은 GitOps 저장소에 있으며 이 Backend 저장소에는 배포 manifest 복사본을 두지 않습니다.
+
+Argo CD ApplicationSet은 Backend 저장소 밖의 강사 전달물로 관리합니다. Production DB credential은 GitHub `production` Environment secret으로 관리하며 값은 저장소에 기록하지 않습니다. AWS 인프라 정본은 아직 `TBD`이며 이 저장소에서 임의로 생성하지 않습니다.
