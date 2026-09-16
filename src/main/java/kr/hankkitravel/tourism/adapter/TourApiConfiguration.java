@@ -25,8 +25,9 @@ public class TourApiConfiguration {
     @Bean
     TourismRealtimeSource tourismRealtimeSource(ExternalHttpClient http, TourApiPageParser pageParser,
             TourApiRestaurantDetailClient detailClient, TourApiRestaurantPresentationParser presentationParser,
+            TourApiPlaceDetailParser placeDetailParser,
             @Value("${hankki.integrations.tour-api-base-url}") String baseUrl,
             @Value("${DATA_GO_KR_SERVICE_KEY:}") String key) {
-        return new TourApiRealtimeRestaurantClient(http, pageParser, detailClient, presentationParser, baseUrl, key);
+        return new TourApiRealtimeRestaurantClient(http, pageParser, detailClient, presentationParser, placeDetailParser, baseUrl, key);
     }
 }

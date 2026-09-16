@@ -169,7 +169,7 @@ class TripMysqlIntegrationTest {
         assertThatThrownBy(()->jdbc.update("INSERT INTO meal_anchors(trip_meal_slot_id,provider,content_id,content_type) VALUES(?,'KTO','91002','39')",sid)).isInstanceOf(DataIntegrityViolationException.class);
         var cols=jdbc.queryForList("SELECT column_name FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='meal_anchors'",String.class);
         assertThat(cols).containsExactlyInAnyOrder("id","trip_meal_slot_id","provider","content_id","content_type","created_at","updated_at");
-        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("11");
+        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("12");
         assertThat(flyway.migrate().migrationsExecuted).isZero(); assertThat(flyway.info().pending()).isEmpty();
     }
     @Test void concurrentAnchorPutsKeepExactlyOneReference() throws Exception {

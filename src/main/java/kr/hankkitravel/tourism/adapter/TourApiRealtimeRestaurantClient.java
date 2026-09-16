@@ -17,14 +17,17 @@ public final class TourApiRealtimeRestaurantClient implements TourismRealtimeSou
     private final TourApiPageParser pageParser;
     private final TourApiRestaurantDetailClient detailClient;
     private final TourApiRestaurantPresentationParser presentationParser;
+    private final TourApiPlaceDetailParser placeDetailParser;
     private final String baseUrl;
     private final String serviceKey;
 
     public TourApiRealtimeRestaurantClient(ExternalHttpClient http, TourApiPageParser pageParser,
             TourApiRestaurantDetailClient detailClient, TourApiRestaurantPresentationParser presentationParser,
+            TourApiPlaceDetailParser placeDetailParser,
             String baseUrl, String serviceKey) {
         this.http = http; this.pageParser = pageParser; this.detailClient = detailClient;
-        this.presentationParser = presentationParser; this.baseUrl = baseUrl; this.serviceKey = serviceKey;
+        this.presentationParser = presentationParser; this.placeDetailParser=placeDetailParser;
+        this.baseUrl = baseUrl; this.serviceKey = serviceKey;
     }
 
     @Override
@@ -40,6 +43,20 @@ public final class TourApiRealtimeRestaurantClient implements TourismRealtimeSou
         var detail = detailClient.fetch(contentId);
         var presentation = presentationParser.parse(get("/detailCommon2", Map.<String, Object>of("contentId", contentId)));
         return detail.withPresentation(presentation);
+    }
+
+    @Override
+    public TourApiPage fetchPlacePage(TourismRegion region, kr.hankkitravel.tourism.model.TourismContentType contentType,
+            int pageNo,int numOfRows) {
+        if(region==null||contentType==null||pageNo<1||numOfRows<1) throw new IllegalArgumentException("지역과 페이지 범위를 확인하세요.");
+        return pageParser.parse(get("/areaBasedList2",Map.<String,Object>of("pageNo",pageNo,"numOfRows",numOfRows,
+                "contentTypeId",contentType.code(),"lDongRegnCd",region.lDongRegnCd(),"lDongSignguCd",region.lDongSignguCd())));
+    }
+
+    @Override
+    public kr.hankkitravel.tourism.model.TourismLivePlace fetchPlaceDetail(String contentId) {
+        validateContentId(contentId);
+        return placeDetailParser.parse(get("/detailCommon2",Map.<String,Object>of("contentId",contentId)));
     }
 
     private String get(String endpoint, Map<String, Object> parameters) {

@@ -21,10 +21,9 @@ class V11UpgradeTest {
             s.executeUpdate("INSERT INTO family_profiles(id,owner_guest_id,name) VALUES(1,1,'legacy profile')");
             s.executeUpdate("INSERT INTO trips(id,profile_id,status) VALUES(1,1,'DRAFT')");
             var current=Flyway.configure().dataSource(MYSQL.getJdbcUrl(),MYSQL.getUsername(),MYSQL.getPassword())
-                    .locations("classpath:db/migration").cleanDisabled(true).load();
+                    .locations("classpath:db/migration").target("11").cleanDisabled(true).load();
             assertThat(current.migrate().migrationsExecuted).isEqualTo(1);
             assertThat(current.validateWithResult().validationSuccessful).isTrue();
-            assertThat(current.migrate().migrationsExecuted).isZero();
             try(var r=s.executeQuery("SELECT profile_id,status,public_id,guest_id,start_date,end_date FROM trips WHERE id=1")) {
                 assertThat(r.next()).isTrue(); assertThat(r.getLong(1)).isEqualTo(1); assertThat(r.getString(2)).isEqualTo("DRAFT");
                 for(int i=3;i<=6;i++) assertThat(r.getObject(i)).isNull();
@@ -32,6 +31,11 @@ class V11UpgradeTest {
             assertThatThrownBy(()->s.executeUpdate("UPDATE trips SET guest_id=1 WHERE id=1")).isInstanceOf(java.sql.SQLException.class);
             assertThatThrownBy(()->s.executeUpdate("INSERT INTO trips(profile_id,public_id,guest_id,region_key,start_date,end_date) VALUES(1,'00000000-0000-0000-0000-000000000002',1,'JEJU','2026-09-20','2026-09-24')"))
                     .isInstanceOf(java.sql.SQLException.class);
+            var latest=Flyway.configure().dataSource(MYSQL.getJdbcUrl(),MYSQL.getUsername(),MYSQL.getPassword())
+                    .locations("classpath:db/migration").cleanDisabled(true).load();
+            assertThat(latest.migrate().migrationsExecuted).isEqualTo(1);
+            assertThat(latest.info().current().getVersion().toString()).isEqualTo("12");
+            assertThat(latest.migrate().migrationsExecuted).isZero();
         }
     }
 }

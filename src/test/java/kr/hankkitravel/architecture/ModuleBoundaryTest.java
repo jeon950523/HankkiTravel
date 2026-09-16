@@ -20,7 +20,7 @@ class ModuleBoundaryTest {
             "tourism", Set.of("shared"), "restaurant", Set.of("shared", "tourism"),
             "nutrition", Set.of("shared", "tourism"), "transit", Set.of("shared"),
             "recommendation", Set.of("shared", "profile", "tourism", "transit"),
-            "trip", Set.of("shared", "profile", "identity", "tourism", "recommendation"));
+            "trip", Set.of("shared", "profile", "identity", "tourism", "recommendation", "transit"));
 
     private static String module(JavaClass type) {
         if (!type.getPackageName().startsWith(ROOT)) return "";
@@ -103,6 +103,7 @@ class ModuleBoundaryTest {
                 Map.entry("tourism_sync_runs", "tourism"), Map.entry("tourism_sync_scope_states", "tourism"),
                 Map.entry("restaurants", "restaurant"), Map.entry("trips", "trip"),
                 Map.entry("trip_days", "trip"), Map.entry("trip_meal_slots", "trip"), Map.entry("meal_anchors", "trip"),
+                Map.entry("trip_day_place_anchors", "trip"),
                 Map.entry("nutrition_foods", "nutrition"), Map.entry("nutrition_import_runs", "nutrition"));
         var tablePattern = java.util.regex.Pattern.compile("(?i)\\b(?:FROM|INTO|UPDATE|JOIN)\\s+([a-z_]+)");
         var production = new ClassFileImporter().withImportOption(new ImportOption.DoNotIncludeTests())
@@ -132,6 +133,15 @@ class ModuleBoundaryTest {
                 assertThat(found).as(method.toString()).isTrue();
             }
         }
-        assertThat(mapperCount).isEqualTo(16);
+        assertThat(mapperCount).isEqualTo(17);
+    }
+
+    @Test void tripPlannerHasNoLocalTourismCacheDependency() throws Exception {
+        for (var path : java.nio.file.Files.walk(java.nio.file.Path.of("src/main/java/kr/hankkitravel/trip"))
+                .filter(java.nio.file.Files::isRegularFile).toList()) {
+            String source=java.nio.file.Files.readString(path);
+            assertThat(source).as(path.toString()).doesNotContain("TourismPlaceMapper","RestaurantMapper","TourismCache","SyncSnapshot",
+                    "FROM tourism_places","JOIN tourism_places","FROM restaurants","JOIN restaurants");
+        }
     }
 }

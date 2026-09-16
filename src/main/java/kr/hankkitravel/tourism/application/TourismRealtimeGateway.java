@@ -6,6 +6,8 @@ import kr.hankkitravel.tourism.model.TourismNutritionEvidence;
 import kr.hankkitravel.tourism.model.TourismRegion;
 import kr.hankkitravel.tourism.model.TourismRestaurantDetail;
 import kr.hankkitravel.tourism.model.TourismRestaurantRuntimeData;
+import kr.hankkitravel.tourism.model.TourismContentType;
+import kr.hankkitravel.tourism.model.TourismLivePlace;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -35,6 +37,16 @@ public class TourismRealtimeGateway {
         TourismRestaurantRuntimeData restaurant = restaurantRules.evaluate(detail);
         var matches = restaurant.menuCandidates().stream().map(nutrition::match).toList();
         return new DecisionData(contentId, detail, restaurant, matches);
+    }
+
+    public TourApiPage places(TourismRegion region,TourismContentType type,int page,int size) {
+        if(region==null||type==null||page<0||size<1||size>maxPageSize) throw new IllegalArgumentException("페이지/건수 범위를 확인하세요.");
+        return source.fetchPlacePage(region,type,page+1,size);
+    }
+
+    public TourismLivePlace place(String contentId) {
+        if(contentId==null||!contentId.matches("[0-9]{1,20}")) throw new IllegalArgumentException("콘텐츠 ID 형식을 확인하세요.");
+        return source.fetchPlaceDetail(contentId);
     }
 
     public TourismRegion region(String regionKey) {
