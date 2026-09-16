@@ -4,7 +4,7 @@ const guestId = '9d4f2c3a-6d29-4c12-8a70-2c6a2f87b111'
 const tripId = 'c4b44ec1-ae62-4568-a7a9-25e4469d5d11'
 const slotId = '75a9d2bb-379f-42fc-bb36-047cbd34b853'
 const profile = { profileId: 42, name: '부모님과 제주', transportMode: 'CAR', parkingPreference: 'REQUIRED', walkingBurdenPreference: 'NORMAL', transferPreference: 'AVOID', stairsAvoidance: true, members: [{ memberId: 7, nickname: '엄마', continuousWalkingMinutes: 20, stairsPreference: 'AVOID', mealCautions: ['SODIUM'] }] }
-const candidate = { contentId: '123', title: '현재 식당', areaLabel: '제주시 현재로', address: '제주시 현재로', imageUrl: null, compatibilityScore: 82, overallScore: 82, evidenceCoverage: 60, informationEvidence: 'REFERENCE', phone: '064-123-4567', contactEvidence: 'TOUR_API_LIVE', ourFamilyFitReasons: ['공개 정보에서 확인한 근거예요.'], ourFamilyCautions: ['원재료는 직접 확인해 주세요.'], checkBeforeVisit: ['운영시간을 방문 전에 확인해 주세요.'], nutritionEvidence: [{ menuName: '비빔밥', matchLevel: 'HIGH', standardFood: '비빔밥', referenceLabel: '표준 음식 기준' }], evaluatedDimensions: [{ code: 'FAMILY_MEAL_FIT', label: '식사 조건', weight: 40, evaluated: true, awardedPoints: 34, maxPoints: 40, evidenceState: 'EVALUATED' }] }
+const candidate = { contentId: '123', title: '현재 식당', areaLabel: '제주시 현재로', address: '제주시 현재로', imageUrl: null, compatibilityScore: 82, overallScore: 82, evidenceCoverage: 70, informationEvidence: 'REFERENCE', phone: '064-123-4567', placeUrl: 'https://place.map.kakao.com/123', contactEvidence: 'KTO_DIRECT', ourFamilyFitReasons: ['공개 정보에서 확인한 근거예요.'], ourFamilyCautions: ['원재료는 직접 확인해 주세요.'], checkBeforeVisit: ['공개된 메뉴 정보가 부족해 식사 조건을 충분히 비교하기 어려워요. 방문 전에 전화로 재료와 조리법을 확인해 주세요.'], nutritionEvidence: [{ menuName: '비빔밥', matchLevel: 'HIGH', standardFood: '비빔밥', referenceLabel: '표준 음식 기준' }, { menuName: '돌솥밥', matchLevel: 'MEDIUM', standardFood: '비빔밥', referenceLabel: '유사 음식 기준' }], evaluatedDimensions: [{ code: 'FAMILY_MEAL_FIT', label: '식사 조건', weight: 40, evaluated: true, awardedPoints: 34, maxPoints: 40, evidenceState: 'EVALUATED' }, { code: 'AREA_DEMAND_SIGNAL', label: '지역 방문 수요', weight: 10, evaluated: true, awardedPoints: 8, maxPoints: 10, evidenceState: 'EVALUATED' }, { code: 'REVIEW_SIGNAL', label: '후기/평판', weight: 10, evaluated: false, awardedPoints: 0, maxPoints: 0, evidenceState: 'NOT_EVALUATED' }] }
 const place = { contentId: '456', contentType: '12', title: '현재 관광지', imageUrl: null, address: '제주시 여행로', coordinates: { longitude: 126.5, latitude: 33.5 }, informationEvidence: 'CURRENT', fitReasons: ['현재 일정 흐름과 함께 볼 수 있어요.'], checkBeforeVisit: ['운영시간을 확인해 주세요.'], sourceAttribution: '출처: ⓒ한국관광공사' }
 const recommendation = { topCandidates: [candidate], perspectives: [{ perspective: 'BALANCED', status: 'READY', message: null, candidates: [candidate] }], candidateCount: 1, dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사', nutritionNotice: '표준 음식 기준 또는 유사 음식 기준 참고정보입니다.' }
 
@@ -53,6 +53,14 @@ for (const width of [360, 390, 768]) {
     await page.getByRole('button', { name: '점심 TOP3 보기' }).click()
     await expect(page.getByRole('heading', { name: '식당 추천' })).toBeVisible()
     await expect(page.getByText('출처: ⓒ한국관광공사')).toBeVisible()
+    await expect(page.getByText('지역 방문 수요')).toBeVisible()
+    await expect(page.getByText('후기/평판')).toBeVisible()
+    await expect(page.getByText('미평가')).toBeVisible()
+    await expect(page.getByRole('link', { name: '전화로 확인하기' })).toHaveAttribute('href', 'tel:0641234567')
+    await expect(page.getByRole('link', { name: '지도·후기 보기' })).toHaveAttribute('target', '_blank')
+    await expect(page.locator('.nutrition-line')).toContainText('표준 음식 기준')
+    await expect(page.locator('.nutrition-line')).toContainText('유사 음식 기준')
+    await expect(page.getByText(/공개된 메뉴 정보가 부족해/)).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     expect(errors).toEqual([])
   })
