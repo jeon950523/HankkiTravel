@@ -352,6 +352,15 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 .trip-planner .timeline > li { scroll-margin-top: 120px; }
 .map-missing-note { color: var(--color-accent-text); font-size: 11px; }
 .car-route-notice { padding: 12px 14px; border-radius: 12px; color: var(--color-secondary); background: var(--color-soft); font-size: 13px; line-height: 1.55; }
+.perspective-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.perspective-tabs button { min-width: 0; min-height: 46px; padding: 10px; border: 1px solid var(--color-border-control); border-radius: 12px; color: var(--color-olive); background: var(--color-surface); font-weight: 750; overflow-wrap: anywhere; }
+.perspective-tabs button.active { color: white; background: var(--color-olive); border-color: var(--color-olive); }
+.day-burden { display: grid; gap: 4px; padding: 12px 14px; border-radius: 12px; background: var(--color-soft); color: var(--color-secondary); font-size: 13px; }
+.day-burden strong { color: var(--color-olive); }
+.day-burden[data-level="HIGH"] { border: 1px solid var(--color-terracotta); }
+.day-burden p { margin: 2px 0 0; color: var(--color-accent-text); }
+.attraction-card .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.attraction-card .facts div { overflow-wrap: anywhere; }
 @media (min-width: 640px) {
   .wizard-options.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .live-card { display: grid; grid-template-columns: minmax(220px, 34%) 1fr; }
@@ -371,4 +380,5 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   .timeline-number { width: 24px; height: 24px; }
   .day-map-shell { height: 230px; }
   .day-summary-switcher button { min-width: 140px; }
+  .attraction-card .facts { grid-template-columns: 1fr; }
 }

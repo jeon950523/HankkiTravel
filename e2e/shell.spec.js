@@ -5,7 +5,7 @@ const tripId = 'c4b44ec1-ae62-4568-a7a9-25e4469d5d11'
 const slotId = '75a9d2bb-379f-42fc-bb36-047cbd34b853'
 const profile = { profileId: 42, name: '부모님과 제주', transportMode: 'CAR', parkingPreference: 'REQUIRED', walkingBurdenPreference: 'NORMAL', transferPreference: 'AVOID', stairsAvoidance: true, members: [{ memberId: 7, nickname: '엄마', continuousWalkingMinutes: 20, stairsPreference: 'AVOID', mealCautions: ['SODIUM'] }] }
 const candidate = { contentId: '123', title: '현재 식당', areaLabel: '제주시 현재로', address: '제주시 현재로', imageUrl: null, compatibilityScore: 82, overallScore: 82, evidenceCoverage: 70, informationEvidence: 'REFERENCE', phone: '064-123-4567', placeUrl: 'https://place.map.kakao.com/123', contactEvidence: 'KTO_DIRECT', ourFamilyFitReasons: ['공개 정보에서 확인한 근거예요.'], ourFamilyCautions: ['원재료는 직접 확인해 주세요.'], checkBeforeVisit: ['공개된 메뉴 정보가 부족해 식사 조건을 충분히 비교하기 어려워요. 방문 전에 전화로 재료와 조리법을 확인해 주세요.'], nutritionEvidence: [{ menuName: '비빔밥', matchLevel: 'HIGH', standardFood: '비빔밥', referenceLabel: '표준 음식 기준' }, { menuName: '돌솥밥', matchLevel: 'MEDIUM', standardFood: '비빔밥', referenceLabel: '유사 음식 기준' }], evaluatedDimensions: [{ code: 'FAMILY_MEAL_FIT', label: '식사 조건', weight: 40, evaluated: true, awardedPoints: 34, maxPoints: 40, evidenceState: 'EVALUATED' }, { code: 'AREA_DEMAND_SIGNAL', label: '지역 방문 수요', weight: 10, evaluated: true, awardedPoints: 8, maxPoints: 10, evidenceState: 'EVALUATED' }, { code: 'REVIEW_SIGNAL', label: '후기/평판', weight: 10, evaluated: false, awardedPoints: 0, maxPoints: 0, evidenceState: 'NOT_EVALUATED' }] }
-const place = { contentId: '456', contentType: '12', title: '현재 관광지', imageUrl: null, address: '제주시 여행로', coordinates: { longitude: 126.5, latitude: 33.5 }, informationEvidence: 'CURRENT', fitReasons: ['현재 일정 흐름과 함께 볼 수 있어요.'], checkBeforeVisit: ['운영시간을 확인해 주세요.'], sourceAttribution: '출처: ⓒ한국관광공사' }
+const place = { contentId: '456', contentType: '12', title: '현재 관광지', areaLabel: '제주시', imageUrl: null, address: '제주시 여행로', coordinates: { longitude: 126.5, latitude: 33.5 }, informationEvidence: 'TOUR_API_LIVE', perspective: 'NEARBY_COURSE', overallScore: 88, evidenceCoverage: 100, routeBurden: { state: 'REFERENCE', level: 'LOW', score: 90 }, distanceMeters: 4200, transitSummary: null, familyMobilityEvidence: ['자동차는 직선거리 기준 참고값입니다.'], reasons: ['현재 일정에서 이동 부담이 적어요.'], cautions: ['실제 도로 이동시간이 아닙니다. 자동차 이동시간은 제공하지 않아요.'], fitReasons: ['현재 일정에서 이동 부담이 적어요.'], checkBeforeVisit: ['실제 도로 이동시간이 아닙니다.'], sourceAttribution: '출처: ⓒ한국관광공사' }
 const recommendation = { topCandidates: [candidate], perspectives: [{ perspective: 'BALANCED', status: 'READY', message: null, candidates: [candidate] }], candidateCount: 1, dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사', nutritionNotice: '표준 음식 기준 또는 유사 음식 기준 참고정보입니다.' }
 
 async function mockKakaoMap(page) {
@@ -41,7 +41,7 @@ async function mockGoldenApi(page, { map = true } = {}) {
     if (pathname.endsWith('/days/1/focus-recommendations') && request.method() === 'POST') return json({ slotType: 'DAY_FOCUS', candidates: [place], dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사' })
     if (pathname.endsWith('/days/1/place-anchors/DAY_FOCUS') && request.method() === 'PUT') { focused = true; return json({ publicId: 'focus-ref', slotType: 'DAY_FOCUS', provider: 'KTO', contentId: '456', contentType: '12' }) }
     if (pathname.endsWith(`/meal-slots/${slotId}/anchor`) && request.method() === 'PUT') { anchored = true; return json({ provider: 'KTO', contentId: '123', contentType: '39' }) }
-    if (pathname.endsWith('/days/1/place-recommendations') && request.method() === 'POST') return json({ slotType: 'AFTERNOON_ACTIVITY', candidates: [place], dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사' })
+    if (pathname.endsWith('/days/1/place-recommendations') && request.method() === 'POST') return json({ slotType: 'AFTERNOON_ACTIVITY', candidates: [place], perspectives: [{ perspective: 'NEARBY_COURSE', status: 'READY', message: '현재 일정에서 이동 부담이 적은 장소를 우선했어요.', candidates: [place] }, { perspective: 'SIGNATURE_COURSE', status: 'READY', message: '조금 더 이동하더라도 공식 지역 대표성을 함께 고려했어요.', candidates: [{ ...place, perspective: 'SIGNATURE_COURSE', overallScore: 91 }] }], movementContext: 'READY', dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사' })
     if (pathname.endsWith('/days/1/place-anchors/AFTERNOON_ACTIVITY') && request.method() === 'PUT') return json({ publicId: 'ref', slotType: 'AFTERNOON_ACTIVITY', provider: 'KTO', contentId: '456', contentType: '12' })
     if (pathname.endsWith('/days/1/planner') && request.method() === 'GET') {
       const items = []
@@ -118,6 +118,11 @@ test('식당과 관광지를 선택하고 지도·카드 focus와 Kakao 이동�
   await page.getByRole('button', { name: '점심 TOP3 보기' }).click()
   await page.getByRole('button', { name: '이 식당 선택' }).click()
   await page.getByRole('button', { name: '관광지 추천 보기' }).click()
+  await expect(page.getByRole('tab', { name: '가까운 코스' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByText(/직선거리 약 4.2km/)).toBeVisible()
+  await expect(page.getByText(/실제 도로 이동시간이 아님/).first()).toBeVisible()
+  await page.getByRole('tab', { name: '대표 명소 코스' }).click()
+  await expect(page.getByRole('tab', { name: '대표 명소 코스' })).toHaveAttribute('aria-selected', 'true')
   await page.getByRole('button', { name: '이 관광지 선택' }).click()
   await page.getByRole('button', { name: '오늘 일정 보기' }).click()
   await expect(page.getByRole('heading', { name: '지도와 오늘의 일정' })).toBeVisible()
