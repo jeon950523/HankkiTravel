@@ -31,7 +31,7 @@ public class SecurityConfiguration {
         var healthCors = cors(webBaseUrl, List.of("GET"));
         var adminCors = cors(webBaseUrl, List.of("GET", "POST"));
         var liveTourismCors = cors(webBaseUrl, List.of("GET"));
-        var guestProfileCors = cors(webBaseUrl, List.of("GET", "POST", "PUT"));
+        var guestProfileCors = cors(webBaseUrl, List.of("GET", "POST", "PUT", "DELETE"));
         var recommendationCors = cors(webBaseUrl, List.of("POST"));
         var source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/actuator/health/**", healthCors);

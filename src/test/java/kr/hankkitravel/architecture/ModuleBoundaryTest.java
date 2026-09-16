@@ -20,7 +20,7 @@ class ModuleBoundaryTest {
             "tourism", Set.of("shared"), "restaurant", Set.of("shared", "tourism"),
             "nutrition", Set.of("shared", "tourism"), "transit", Set.of("shared"),
             "recommendation", Set.of("shared", "profile", "tourism", "transit"),
-            "trip", Set.of("shared", "profile"));
+            "trip", Set.of("shared", "profile", "identity", "tourism", "recommendation"));
 
     private static String module(JavaClass type) {
         if (!type.getPackageName().startsWith(ROOT)) return "";
@@ -47,7 +47,8 @@ class ModuleBoundaryTest {
                 boolean forbidden = cross && (!ALLOWED.get(source).contains(destination) || infrastructure(target));
                 forbidden |= origin.getPackageName().contains(".model") && infrastructure(target);
                 forbidden |= cross && source.equals("trip") && destination.equals("profile")
-                        && !target.getName().equals("kr.hankkitravel.profile.model.FamilyProfileId");
+                        && !target.getName().equals("kr.hankkitravel.profile.model.FamilyProfileId")
+                        && !target.getName().startsWith("kr.hankkitravel.profile.application.");
                 forbidden |= origin.getSimpleName().endsWith("Controller") && target.getSimpleName().endsWith("Mapper");
                 if (forbidden) events.add(SimpleConditionEvent.violated(dependency, dependency.getDescription()));
             }
@@ -101,6 +102,7 @@ class ModuleBoundaryTest {
                 Map.entry("family_members", "profile"), Map.entry("family_member_cautions", "profile"), Map.entry("tourism_places", "tourism"),
                 Map.entry("tourism_sync_runs", "tourism"), Map.entry("tourism_sync_scope_states", "tourism"),
                 Map.entry("restaurants", "restaurant"), Map.entry("trips", "trip"),
+                Map.entry("trip_days", "trip"), Map.entry("trip_meal_slots", "trip"), Map.entry("meal_anchors", "trip"),
                 Map.entry("nutrition_foods", "nutrition"), Map.entry("nutrition_import_runs", "nutrition"));
         var tablePattern = java.util.regex.Pattern.compile("(?i)\\b(?:FROM|INTO|UPDATE|JOIN)\\s+([a-z_]+)");
         var production = new ClassFileImporter().withImportOption(new ImportOption.DoNotIncludeTests())
@@ -130,6 +132,6 @@ class ModuleBoundaryTest {
                 assertThat(found).as(method.toString()).isTrue();
             }
         }
-        assertThat(mapperCount).isEqualTo(15);
+        assertThat(mapperCount).isEqualTo(16);
     }
 }

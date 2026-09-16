@@ -1,5 +1,9 @@
 package kr.hankkitravel.tourism.model;
 
 /** Current basic presentation fields from TourAPI detailCommon2. */
-public record TourismRestaurantPresentation(String title, String address, String firstImage) {
+public record TourismRestaurantPresentation(String title, String address, String firstImage,
+        String contentId, String contentType, String regionCode, String districtCode) {
+    public TourismRestaurantPresentation(String title, String address, String firstImage) {
+        this(title, address, firstImage, null, null, null, null);
+    }
 }

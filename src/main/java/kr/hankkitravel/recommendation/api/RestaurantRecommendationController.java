@@ -66,7 +66,7 @@ public class RestaurantRecommendationController {
     }
     public record RecommendationResponse(Context context, List<PerspectiveResponse> perspectives, int candidateCount,
             CallSummary callSummary, String dataAvailability, String sourceAttribution, String nutritionNotice) {
-        static RecommendationResponse from(RestaurantRecommendationService.RecommendationResult result) {
+        public static RecommendationResponse from(RestaurantRecommendationService.RecommendationResult result) {
             return new RecommendationResponse(new Context(result.context().region(), result.context().tripDate(),
                     result.context().mealType(), result.context().startMode()), result.perspectives().stream()
                     .map(PerspectiveResponse::from).toList(), result.candidateCount(),
