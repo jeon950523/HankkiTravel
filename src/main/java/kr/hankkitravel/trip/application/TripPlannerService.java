@@ -21,16 +21,21 @@ public class TripPlannerService {
     static final String ATTRIBUTION="출처: ⓒ한국관광공사";
     private final TripPlaceScheduleService schedules; private final FamilyProfileApplicationService profiles;
     private final TourismRealtimeGateway tourism; private final TransitRouteFinder transit;
+    private final RouteAwareAttractionRecommendationService routeAwareAttractions;
     private final int listSize; private final int detailLimit;
+    private final int dayModerateMinutes; private final int dayHighMinutes;
     public TripPlannerService(TripPlaceScheduleService schedules,FamilyProfileApplicationService profiles,
-            TourismRealtimeGateway tourism,TransitRouteFinder transit,
-            @Value("${hankki.planner.list-size:15}")int listSize,@Value("${hankki.planner.detail-limit:6}")int detailLimit){
-        if(listSize<1||listSize>30||detailLimit<1||detailLimit>listSize)throw new IllegalArgumentException("플래너 호출 제한 설정이 올바르지 않습니다.");
-        this.schedules=schedules;this.profiles=profiles;this.tourism=tourism;this.transit=transit;this.listSize=listSize;this.detailLimit=detailLimit;
+            TourismRealtimeGateway tourism,TransitRouteFinder transit,RouteAwareAttractionRecommendationService routeAwareAttractions,
+            @Value("${hankki.planner.list-size:15}")int listSize,@Value("${hankki.planner.detail-limit:6}")int detailLimit,
+            @Value("${hankki.planner.attraction.day-burden.moderate-transit-minutes:90}")int dayModerateMinutes,
+            @Value("${hankki.planner.attraction.day-burden.high-transit-minutes:180}")int dayHighMinutes){
+        if(listSize<1||listSize>30||detailLimit<1||detailLimit>listSize||dayModerateMinutes<1||dayHighMinutes<=dayModerateMinutes)throw new IllegalArgumentException("플래너 호출 제한 설정이 올바르지 않습니다.");
+        this.schedules=schedules;this.profiles=profiles;this.tourism=tourism;this.transit=transit;this.routeAwareAttractions=routeAwareAttractions;this.listSize=listSize;this.detailLimit=detailLimit;
+        this.dayModerateMinutes=dayModerateMinutes;this.dayHighMinutes=dayHighMinutes;
     }
     public TripPlannerView.Recommendations recommendActivities(String guest,String trip,int day,TripPlannerView.SlotType slot){
         if(slot==null||!slot.activity()||slot==TripPlannerView.SlotType.DAY_FOCUS)throw TripProblem.invalid("PLACE_SLOT_TYPE_INVALID");
-        return recommend(guest,trip,day,slot,TourismContentType.ATTRACTION);
+        return routeAwareAttractions.recommend(guest,trip,day,slot);
     }
     public TripPlannerView.Recommendations recommendFocus(String guest,String trip,int day){
         return recommend(guest,trip,day,TripPlannerView.SlotType.DAY_FOCUS,TourismContentType.ATTRACTION,null);
@@ -97,7 +102,18 @@ public class TripPlannerService {
             }catch(IntegrationException e){legs.add(unavailableLeg(from,to));}
         }
         return new TripPlannerView.Planner(refs.context().tripPublicId(),day,refs.context().travelDate(),List.copyOf(items),List.copyOf(legs),
-                new TripPlannerView.CallSummary(0,detailCalls,transitCalls,elapsed(started)));
+                new TripPlannerView.CallSummary(0,detailCalls,transitCalls,elapsed(started)),dayBurden(items,legs,profile.transportMode()));
+    }
+    private TripPlannerView.DayBurden dayBurden(List<TripPlannerView.Item> items,List<TripPlannerView.Leg> legs,String mode){
+        if(!"PUBLIC_TRANSIT".equals(mode))return new TripPlannerView.DayBurden("NOT_EVALUATED","NOT_EVALUATED",items.size(),null,0,0,
+                "자동차 이동시간은 제공하지 않아요. 거리와 공개 주차정보를 참고해 주세요.");
+        var current=legs.stream().filter(leg->"CURRENT_DATA".equals(leg.dataAvailability())).toList();
+        if(current.isEmpty())return new TripPlannerView.DayBurden("NOT_EVALUATED","NOT_EVALUATED",items.size(),null,0,0,null);
+        BigDecimal minutes=current.stream().map(TripPlannerView.Leg::durationMinutes).reduce(BigDecimal.ZERO,BigDecimal::add);
+        long walking=current.stream().mapToLong(TripPlannerView.Leg::explicitWalkingDistanceMeters).sum();int transfers=current.stream().mapToInt(TripPlannerView.Leg::transferCount).sum();
+        String level=minutes.compareTo(BigDecimal.valueOf(dayHighMinutes))>0?"HIGH":minutes.compareTo(BigDecimal.valueOf(dayModerateMinutes))>0?"MODERATE":"LOW";
+        String caution="HIGH".equals(level)?"오늘 이동이 많은 편이에요. 가까운 코스를 우선하면 부담을 줄일 수 있어요.":null;
+        return new TripPlannerView.DayBurden(current.size()==legs.size()?"EVALUATED":"PARTIAL",level,items.size(),minutes,walking,transfers,caution);
     }
     private AnchorContext mealAnchor(List<TripPlannerRows.Reference> meals){int calls=0;for(var r:meals)try{calls++;var live=tourism.place(r.getContentId());if(live.coordinates()!=null)return new AnchorContext(live.coordinates(),calls);}catch(RuntimeException ignored){}return new AnchorContext(null,calls);}
     private TripPlannerView.Item unavailable(TripPlannerRows.Reference r){return new TripPlannerView.Item(r.getSlotType(),r.getProvider(),r.getContentId(),r.getContentType(),null,null,null,null,ATTRIBUTION,"CURRENT_DATA_UNAVAILABLE");}

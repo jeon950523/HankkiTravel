@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.util.*;
 import kr.hankkitravel.identity.application.GuestApplicationService;
 import kr.hankkitravel.profile.application.FamilyProfileApplicationService;
+import kr.hankkitravel.recommendation.application.AreaDemandSignalProvider;
 import kr.hankkitravel.shared.geo.Coordinates;
 import kr.hankkitravel.shared.integration.*;
 import kr.hankkitravel.tourism.application.TourismRealtimeSource;
@@ -44,7 +45,7 @@ class TripPlannerMysqlIntegrationTest {
     @Autowired GuestApplicationService guests;@Autowired FamilyProfileApplicationService profiles;
     @Autowired TripScheduleService trips;@Autowired TripPlannerService planner;@Autowired TripPlaceScheduleService places;
     @Autowired JdbcTemplate jdbc;@Autowired Flyway flyway;@MockitoBean TourismRealtimeSource source;
-    @MockitoBean TransitRouteFinder transit;@LocalServerPort int port;
+    @MockitoBean TransitRouteFinder transit;@MockitoBean AreaDemandSignalProvider demand;@LocalServerPort int port;
     String guest;long profile;TripView trip;final LocalDate start=LocalDate.of(2026,9,20);
     @BeforeEach void prepare(){
         guest=guests.create().getPublicId();profile=profiles.create(guest,new FamilyProfileApplicationService.ProfileCommand(
@@ -67,6 +68,7 @@ class TripPlannerMysqlIntegrationTest {
             return new TourApiPage(List.of(item),1,15,1);
         });
         when(source.fetchPlaceDetail(anyString())).thenAnswer(inv->{assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();return live(inv.getArgument(0));});
+        when(demand.signal(any(),any())).thenReturn(AreaDemandSignalProvider.Signal.notEvaluated("202508",0,0));
         when(transit.findRoutes(any(),any())).thenAnswer(inv->{assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
             return new TransitResult(TransitResult.Status.OK,List.of(new TransitRoute(new BigDecimal("25.5"),5000,1,1500,"PUBLIC_TRANSIT",List.of(),500,900,"https://map.kakao.test")),"https://map.kakao.test");});
     }

@@ -55,6 +55,27 @@ hankki:
   planner:
     list-size: ${PLANNER_LIST_SIZE:15}
     detail-limit: ${PLANNER_DETAIL_LIMIT:6}
+    attraction:
+      transit-call-limit: ${PLANNER_ATTRACTION_TRANSIT_CALL_LIMIT:6}
+      nearby:
+        max-transit-minutes: ${PLANNER_ATTRACTION_NEARBY_MAX_TRANSIT_MINUTES:90}
+        max-distance-km: ${PLANNER_ATTRACTION_NEARBY_MAX_DISTANCE_KM:25}
+      signature:
+        max-transit-minutes: ${PLANNER_ATTRACTION_SIGNATURE_MAX_TRANSIT_MINUTES:150}
+      day-burden:
+        moderate-transit-minutes: ${PLANNER_DAY_BURDEN_MODERATE_MINUTES:90}
+        high-transit-minutes: ${PLANNER_DAY_BURDEN_HIGH_MINUTES:180}
+      weights:
+        nearby:
+          route: ${PLANNER_ATTRACTION_NEARBY_ROUTE_WEIGHT:50}
+          focus: ${PLANNER_ATTRACTION_NEARBY_FOCUS_WEIGHT:20}
+          mobility: ${PLANNER_ATTRACTION_NEARBY_MOBILITY_WEIGHT:15}
+          relevance: ${PLANNER_ATTRACTION_NEARBY_RELEVANCE_WEIGHT:15}
+        signature:
+          route: ${PLANNER_ATTRACTION_SIGNATURE_ROUTE_WEIGHT:20}
+          focus: ${PLANNER_ATTRACTION_SIGNATURE_FOCUS_WEIGHT:15}
+          relevance: ${PLANNER_ATTRACTION_SIGNATURE_RELEVANCE_WEIGHT:40}
+          demand: ${PLANNER_ATTRACTION_SIGNATURE_DEMAND_WEIGHT:25}
   integrations:
     tour-api-base-url: https://apis.data.go.kr/B551011/KorService2
     demand-strength-base-url: https://apis.data.go.kr/B551011/AreaTarDemDsService

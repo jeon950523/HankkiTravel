@@ -10,7 +10,7 @@ final class LocalEnvironment {
     static String get(String name) throws IOException {
         String value = System.getenv(name);
         if (value != null && !value.isBlank()) return value;
-        var path = Path.of("../.env.local");
+        var path = Files.isRegularFile(Path.of(".env.local")) ? Path.of(".env.local") : Path.of("../.env.local");
         if (!Files.isRegularFile(path)) return "";
         var properties = new Properties();
         try (var reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) { properties.load(reader); }
