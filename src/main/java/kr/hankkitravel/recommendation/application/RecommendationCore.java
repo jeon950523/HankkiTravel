@@ -104,14 +104,16 @@ public final class RecommendationCore {
         dimensions.put(FAMILY_MEAL_FIT, mealDimension(candidate, family, mealByCaution));
         dimensions.put(TRIP_ROUTE_FIT, itineraryDimension(candidate, context));
         dimensions.put(MOBILITY_FIT, mobilityDimension(candidate, family));
-        dimensions.put(AREA_DEMAND_SIGNAL, Dimension.notEvaluated());
+        dimensions.put(AREA_DEMAND_SIGNAL, areaDemandDimension(candidate));
         dimensions.put(REVIEW_SIGNAL, Dimension.notEvaluated());
         dimensions.put(LOCAL_MENU_FIT, localFoodDimension(candidate, context));
         dimensions.replaceAll((code, value) -> value.weighted(scoring.weight(code), switch (code) {
             case FAMILY_MEAL_FIT -> "가족 식사 조건과 공개 메뉴 근거를 비교했어요.";
             case TRIP_ROUTE_FIT -> "오늘의 중심 장소와 식당 사이 이동 맥락을 확인했어요.";
             case MOBILITY_FIT -> "도보·환승·주차 선호 근거를 확인했어요.";
-            case AREA_DEMAND_SIGNAL -> "연결된 공식 지역 방문 수요 데이터가 없어 평가하지 않았어요.";
+            case AREA_DEMAND_SIGNAL -> candidate.areaDemand() == null
+                    ? "공식 지역 방문 수요를 확인하지 못해 평가하지 않았어요."
+                    : candidate.areaDemand().reason();
             case REVIEW_SIGNAL -> "연결된 공식 후기 데이터가 없어 평가하지 않았어요.";
             default -> "공개 메뉴와 Nutrition 참고 근거를 확인했어요.";
         }));
@@ -138,7 +140,11 @@ public final class RecommendationCore {
         if (!hasParkingInformation(candidate.parking()) && "REQUIRED".equals(family.parkingPreference())) {
             checks.add("주차 가능 여부는 방문 전에 확인해 주세요.");
         }
-        if (candidate.menus().isEmpty()) checks.add("대표 메뉴 정보는 방문 전에 다시 확인해 주세요.");
+        if (candidate.menus().isEmpty()) {
+            checks.add("공개된 메뉴 정보가 부족해 식사 조건을 충분히 비교하기 어려워요. 방문 전에 전화로 재료와 조리법을 확인해 주세요.");
+        } else if (candidate.menus().stream().noneMatch(MenuEvidence::usableForScoring)) {
+            checks.add("메뉴는 확인됐지만 표준 영양 기준과 충분히 일치하지 않아 점수에는 반영하지 않았어요.");
+        }
         if (!family.allergens().isEmpty() || !family.avoidedFoods().isEmpty()) {
             checks.add("알레르기 재료·교차조리·실제 조리법은 방문 전 전화로 확인해 주세요.");
         }
@@ -192,6 +198,11 @@ public final class RecommendationCore {
         String all = normalize(candidate.title() + " " + candidate.menus().stream().map(MenuEvidence::rawName)
                 .collect(Collectors.joining(" ")));
         return new Dimension(all.contains(normalize(context.desiredLocalFood())) ? 100 : 40, EvidenceState.EVALUATED);
+    }
+
+    private Dimension areaDemandDimension(Candidate candidate) {
+        if (candidate.areaDemand() == null || !candidate.areaDemand().evaluated()) return Dimension.notEvaluated();
+        return new Dimension(clamp(candidate.areaDemand().score()), EvidenceState.EVALUATED);
     }
 
     private Dimension itineraryDimension(Candidate candidate, RequestContext context) {
@@ -304,18 +315,40 @@ public final class RecommendationCore {
     public record Candidate(String contentId, String title, String areaLabel, String address, String imageUrl, String parking,
             List<MenuEvidence> menus, TransitEvidence transit, kr.hankkitravel.shared.geo.Coordinates coordinates,
             BigDecimal distanceFromAnchorKm,
-            String phone, String placeUrl, String contactEvidence) {
+            String phone, String placeUrl, String contactEvidence, AreaDemandEvidence areaDemand) {
         public Candidate { menus = List.copyOf(menus); }
         public Candidate(String contentId, String title, String address, String imageUrl, String parking,
                 List<MenuEvidence> menus, TransitEvidence transit) {
-            this(contentId,title,null,address,imageUrl,parking,menus,transit,null,null,null,null,"NONE");
+            this(contentId,title,null,address,imageUrl,parking,menus,transit,null,null,null,null,"UNAVAILABLE",null);
         }
-        public Candidate withTransit(TransitEvidence transit) { return new Candidate(contentId,title,areaLabel,address,imageUrl,parking,menus,transit,coordinates,distanceFromAnchorKm,phone,placeUrl,contactEvidence); }
-        public Candidate withDistance(BigDecimal distance) { return new Candidate(contentId,title,areaLabel,address,imageUrl,parking,menus,transit,coordinates,distance,phone,placeUrl,contactEvidence); }
+        public Candidate(String contentId, String title, String areaLabel, String address, String imageUrl, String parking,
+                List<MenuEvidence> menus, TransitEvidence transit, kr.hankkitravel.shared.geo.Coordinates coordinates,
+                BigDecimal distanceFromAnchorKm, String phone, String placeUrl, String contactEvidence) {
+            this(contentId,title,areaLabel,address,imageUrl,parking,menus,transit,coordinates,distanceFromAnchorKm,
+                    phone,placeUrl,contactEvidence,null);
+        }
+        public Candidate withTransit(TransitEvidence transit) { return new Candidate(contentId,title,areaLabel,address,imageUrl,parking,menus,transit,coordinates,distanceFromAnchorKm,phone,placeUrl,contactEvidence,areaDemand); }
+        public Candidate withAreaDemand(AreaDemandEvidence demand) { return new Candidate(contentId,title,areaLabel,address,imageUrl,parking,menus,transit,coordinates,distanceFromAnchorKm,phone,placeUrl,contactEvidence,demand); }
+        public Candidate withContact(String selectedPhone, String selectedPlaceUrl, String evidence) {
+            return new Candidate(contentId,title,areaLabel,address,imageUrl,parking,menus,transit,coordinates,
+                    distanceFromAnchorKm,selectedPhone,selectedPlaceUrl,evidence,areaDemand);
+        }
     }
     public record MenuEvidence(String rawName, String matchLevel, BigDecimal sodiumMg, BigDecimal sugarG,
-            BigDecimal carbohydrateG, String standardFood) {
-        boolean usableForScoring() { return ("HIGH".equals(matchLevel) || "MEDIUM".equals(matchLevel)) && standardFood != null; }
+            BigDecimal carbohydrateG, String standardFood, String reviewState) {
+        public MenuEvidence(String rawName, String matchLevel, BigDecimal sodiumMg, BigDecimal sugarG,
+                BigDecimal carbohydrateG, String standardFood) {
+            this(rawName,matchLevel,sodiumMg,sugarG,carbohydrateG,standardFood,
+                    "HIGH".equals(matchLevel) ? "AUTO_MATCHED" : "REVIEW_REQUIRED");
+        }
+        boolean usableForScoring() {
+            return standardFood != null && ("HIGH".equals(matchLevel)
+                    || ("MEDIUM".equals(matchLevel) && "APPROVED".equals(reviewState)));
+        }
+    }
+    public record AreaDemandEvidence(boolean evaluated, int score, String referencePeriod, String reason,
+            List<String> sourceAttributions) {
+        public AreaDemandEvidence { sourceAttributions = List.copyOf(sourceAttributions); }
     }
     public record TransitEvidence(BigDecimal totalTimeMinutes, int transferCount, long explicitWalkingDistanceMeters,
             long unaccountedDistanceMeters, String landingUrl) { }

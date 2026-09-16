@@ -69,6 +69,25 @@ class RecommendationCoreTest {
                 .anyMatch(text -> text.contains("전화"));
     }
 
+    @Test void demandEvidenceActivatesOnlyAreaDimensionAndReviewRemainsUnevaluated() {
+        var base=candidate("14","식당","주차 가능",List.of(menu("국밥","HIGH","100")));
+        var demand=new RecommendationCore.AreaDemandEvidence(true,78,"202608","공식 지역 방문 수요예요.",List.of("공식 출처"));
+        var candidate=base.withAreaDemand(demand);
+        var scored=core.score(List.of(candidate),sodiumFamily,mealFirst).getFirst();
+        assertThat(scored.dimensions().get(RecommendationCore.AREA_DEMAND_SIGNAL).score()).isEqualTo(78);
+        assertThat(scored.dimensions().get(RecommendationCore.REVIEW_SIGNAL).state())
+                .isEqualTo(RecommendationCore.EvidenceState.NOT_EVALUATED);
+    }
+
+    @Test void onlyHighOrApprovedMediumNutritionCanScore() {
+        var autoMedium=new MenuEvidence("국밥","MEDIUM",new BigDecimal("100"),null,null,"국밥","AUTO_MATCHED");
+        var approvedMedium=new MenuEvidence("국밥","MEDIUM",new BigDecimal("100"),null,null,"국밥","APPROVED");
+        assertThat(core.score(List.of(candidate("15","식당",null,List.of(autoMedium))),sodiumFamily,mealFirst)
+                .getFirst().dimensions().get(RecommendationCore.MEAL).evaluated()).isFalse();
+        assertThat(core.score(List.of(candidate("16","식당",null,List.of(approvedMedium))),sodiumFamily,mealFirst)
+                .getFirst().dimensions().get(RecommendationCore.MEAL).evaluated()).isTrue();
+    }
+
     private Candidate candidate(String id, String title, String parking, List<MenuEvidence> menus) {
         return new Candidate(id, title, "테스트 주소", null, parking, menus, null);
     }

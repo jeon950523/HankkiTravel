@@ -45,15 +45,20 @@ hankki:
   tourism-live:
     max-page-size: ${TOURISM_LIVE_MAX_PAGE_SIZE:30}
   recommendation:
+    demand-reference-period: ${DEMAND_REFERENCE_PERIOD:202509}
     list-page-size: ${RECOMMENDATION_LIST_PAGE_SIZE:16}
     prefilter-limit: ${RECOMMENDATION_PREFILTER_LIMIT:10}
     detail-limit: ${RECOMMENDATION_DETAIL_LIMIT:6}
     transit-limit: ${RECOMMENDATION_TRANSIT_LIMIT:3}
+    contact-match:
+      max-distance-meters: ${CONTACT_MATCH_MAX_DISTANCE_METERS:120}
   planner:
     list-size: ${PLANNER_LIST_SIZE:15}
     detail-limit: ${PLANNER_DETAIL_LIMIT:6}
   integrations:
     tour-api-base-url: https://apis.data.go.kr/B551011/KorService2
+    demand-strength-base-url: https://apis.data.go.kr/B551011/AreaTarDemDsService
+    resource-demand-base-url: https://apis.data.go.kr/B551011/AreaTarResDemService
     kakao-base-url: https://dapi.kakao.com
     connect-timeout: 3s
     request-timeout: 8s

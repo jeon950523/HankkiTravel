@@ -72,12 +72,15 @@ public class RestaurantRecommendationController {
                     result.context().mealType(), result.context().startMode()), result.perspectives().stream()
                     .map(PerspectiveResponse::from).toList(),result.topCandidates().stream().map(RestaurantResponse::from).toList(), result.candidateCount(),
                     new CallSummary(result.callSummary().tourListCalls(), result.callSummary().tourDetailCalls(),
-                            result.callSummary().kakaoTransitCalls(), result.callSummary().elapsedMillis()),
+                            result.callSummary().kakaoTransitCalls(), result.callSummary().demandStrengthCalls(),
+                            result.callSummary().resourceDemandCalls(), result.callSummary().kakaoLocalCalls(),
+                            result.callSummary().elapsedMillis()),
                     result.dataAvailability(), result.sourceAttribution(), result.nutritionNotice());
         }
     }
     public record Context(String region, LocalDate tripDate, String mealType, String startMode) { }
-    public record CallSummary(int tourListCalls, int tourDetailCalls, int kakaoTransitCalls, long elapsedMillis) { }
+    public record CallSummary(int tourListCalls, int tourDetailCalls, int kakaoTransitCalls,
+            int demandStrengthCalls, int resourceDemandCalls, int kakaoLocalCalls, long elapsedMillis) { }
     public record PerspectiveResponse(String perspective, String status, String message, List<RestaurantResponse> candidates) {
         static PerspectiveResponse from(RestaurantRecommendationService.PerspectiveResult result) {
             return new PerspectiveResponse(result.perspective(), result.status(), result.message(),
@@ -112,7 +115,8 @@ public class RestaurantRecommendationController {
     public record NutritionResponse(String menuName, String matchLevel, String standardFood, String referenceLabel) { }
     private record MenuEvidenceView(String rawName, String matchLevel, String standardFood) {
         static boolean displayable(RecommendationCore.MenuEvidence value) {
-            return value.standardFood() != null && ("HIGH".equals(value.matchLevel()) || "MEDIUM".equals(value.matchLevel()));
+            return value.standardFood() != null && ("HIGH".equals(value.matchLevel())
+                    || ("MEDIUM".equals(value.matchLevel()) && "APPROVED".equals(value.reviewState())));
         }
         static NutritionResponse from(RecommendationCore.MenuEvidence value) {
             return new NutritionResponse(value.rawName(), value.matchLevel(), value.standardFood(),

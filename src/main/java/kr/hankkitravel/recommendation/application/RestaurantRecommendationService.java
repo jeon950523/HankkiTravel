@@ -14,6 +14,7 @@ import java.util.Objects;
 import kr.hankkitravel.profile.application.FamilyProfileApplicationService;
 import kr.hankkitravel.profile.application.FamilyProfileSnapshot;
 import kr.hankkitravel.recommendation.application.RecommendationCore.Candidate;
+import kr.hankkitravel.recommendation.application.RecommendationCore.AreaDemandEvidence;
 import kr.hankkitravel.recommendation.application.RecommendationCore.FamilyContext;
 import kr.hankkitravel.recommendation.application.RecommendationCore.InformationEvidence;
 import kr.hankkitravel.recommendation.application.RecommendationCore.MenuEvidence;
@@ -36,6 +37,8 @@ public class RestaurantRecommendationService {
     private final FamilyProfileApplicationService profiles;
     private final TourismRealtimeGateway tourism;
     private final TransitRouteFinder transit;
+    private final AreaDemandSignalProvider areaDemand;
+    private final ContactEnrichmentProvider contacts;
     private final RecommendationCore core;
     private final int listPageSize;
     private final int prefilterLimit;
@@ -43,7 +46,8 @@ public class RestaurantRecommendationService {
     private final int transitLimit;
 
     public RestaurantRecommendationService(FamilyProfileApplicationService profiles, TourismRealtimeGateway tourism,
-            TransitRouteFinder transit, RecommendationScoringProperties scoring,
+            TransitRouteFinder transit, AreaDemandSignalProvider areaDemand, ContactEnrichmentProvider contacts,
+            RecommendationScoringProperties scoring,
             @Value("${hankki.recommendation.list-page-size:16}") int listPageSize,
             @Value("${hankki.recommendation.prefilter-limit:10}") int prefilterLimit,
             @Value("${hankki.recommendation.detail-limit:6}") int detailLimit,
@@ -51,6 +55,8 @@ public class RestaurantRecommendationService {
         this.profiles = profiles;
         this.tourism = tourism;
         this.transit = transit;
+        this.areaDemand = areaDemand;
+        this.contacts = contacts;
         this.core = new RecommendationCore(scoring);
         if (listPageSize < 1 || prefilterLimit < 1 || detailLimit < 1 || transitLimit < 1
                 || prefilterLimit > listPageSize || detailLimit > prefilterLimit || transitLimit > detailLimit) {
@@ -73,6 +79,7 @@ public class RestaurantRecommendationService {
         var family = family(profile);
         var details = new ArrayList<CandidateWithCoordinates>();
         int detailCalls = 0;
+        int kakaoLocalCalls = 0;
         for (var place : page.items().stream().filter(place -> place.contentId() != null && !place.contentId().isBlank())
                 .sorted(Comparator.comparing(kr.hankkitravel.tourism.model.TourismPlace::contentId,
                         RestaurantRecommendationService::stableIdCompare))
@@ -87,11 +94,39 @@ public class RestaurantRecommendationService {
                     BigDecimal.valueOf(distanceKm(command.anchor(),place.coordinates())).setScale(2,java.math.RoundingMode.HALF_UP);
             var candidate = new Candidate(place.contentId(), live.detail().title(), areaLabel(live.detail().address()),
                     live.detail().address(), live.detail().firstImage(), live.detail().parking(), menus(live.nutritionMatches()),
-                    null,place.coordinates(),distance,phone,null,phone==null?"NONE":"TOUR_API_LIVE");
+                    null,place.coordinates(),distance,phone,null,phone==null?"UNAVAILABLE":"KTO_DIRECT");
+            var contact = contacts.enrich(candidate.title(), candidate.address(), place.coordinates());
+            kakaoLocalCalls++;
+            if (contact.status() == ContactEnrichmentProvider.Status.MATCHED) {
+                String selectedPhone = phone == null ? contact.phone() : phone;
+                String evidence = phone == null ? "KAKAO_STRICT_MATCH" : "KTO_DIRECT";
+                candidate = candidate.withContact(selectedPhone, contact.placeUrl(), evidence);
+            }
             if (core.hardDecision(candidate, family, context).included()) {
-                details.add(new CandidateWithCoordinates(candidate, place.coordinates()));
+                AreaDemandSignalProvider.RegionKey regionKey = regionKey(live.detail());
+                details.add(new CandidateWithCoordinates(candidate, place.coordinates(), regionKey));
             }
         }
+
+        Map<String, AreaDemandSignalProvider.Signal> demandByRegion = new LinkedHashMap<>();
+        int demandStrengthCalls = 0;
+        int resourceDemandCalls = 0;
+        var withDemand = new ArrayList<CandidateWithCoordinates>();
+        for (var entry : details) {
+            var key = entry.regionKey();
+            if (key == null) { withDemand.add(entry); continue; }
+            var signal = demandByRegion.get(key.cacheKey());
+            if (signal == null) {
+                signal = areaDemand.signal(key, command.tripDate());
+                demandByRegion.put(key.cacheKey(), signal);
+                demandStrengthCalls += signal.demandStrengthCalls();
+                resourceDemandCalls += signal.resourceDemandCalls();
+            }
+            Candidate enriched = signal.evaluated() ? entry.candidate().withAreaDemand(new AreaDemandEvidence(true,
+                    signal.score(), signal.referencePeriod(), signal.reason(), signal.sourceAttributions())) : entry.candidate();
+            withDemand.add(new CandidateWithCoordinates(enriched, entry.coordinates(), key));
+        }
+        details = withDemand;
 
         int transitCalls = 0;
         boolean transitUnavailable = false;
@@ -112,7 +147,7 @@ public class RestaurantRecommendationService {
                     }
                 }
                 if (core.hardDecision(candidate, family, context).included()) {
-                    withTransit.add(new CandidateWithCoordinates(candidate, entry.coordinates()));
+                    withTransit.add(new CandidateWithCoordinates(candidate, entry.coordinates(), entry.regionKey()));
                 }
             }
             details = withTransit;
@@ -132,6 +167,7 @@ public class RestaurantRecommendationService {
         var topCandidates=core.rank(scored,Perspective.BALANCED);
         return new RecommendationResult(new ResultContext(region, command.tripDate(), command.mealType(), command.startMode()),
                 perspectives, topCandidates, scored.size(), new CallSummary(1, detailCalls, transitCalls,
+                        demandStrengthCalls, resourceDemandCalls, kakaoLocalCalls,
                         Duration.ofNanos(System.nanoTime() - started).toMillis()),
                 transitUnavailable ? "TRANSIT_PARTIALLY_UNAVAILABLE" : "CURRENT_DATA", ATTRIBUTION, NUTRITION_NOTICE);
     }
@@ -152,7 +188,7 @@ public class RestaurantRecommendationService {
             var reference = evidence.referenceNutrition();
             return new MenuEvidence(evidence.rawMenuName(), evidence.matchLevel(), reference == null ? null : reference.sodiumMg(),
                     reference == null ? null : reference.sugarG(), reference == null ? null : reference.carbohydrateG(),
-                    evidence.matchedStandardFood());
+                    evidence.matchedStandardFood(), evidence.reviewState());
         }).toList();
     }
 
@@ -206,6 +242,12 @@ public class RestaurantRecommendationService {
     }
     private static String blankToNull(String value){return value==null||value.isBlank()?null:value.trim();}
     private static String areaLabel(String address){if(address==null||address.isBlank())return null;var parts=address.trim().split("\\s+");return String.join(" ",java.util.Arrays.copyOf(parts,Math.min(3,parts.length)));}
+    private static AreaDemandSignalProvider.RegionKey regionKey(kr.hankkitravel.tourism.model.TourismRestaurantDetail detail) {
+        if (detail.regionCode() == null || detail.regionCode().isBlank()
+                || detail.districtCode() == null || detail.districtCode().isBlank()) return null;
+        String district = detail.districtCode().length() == 3 ? detail.regionCode() + detail.districtCode() : detail.districtCode();
+        return new AreaDemandSignalProvider.RegionKey(detail.regionCode(), district, areaLabel(detail.address()));
+    }
     private static double distanceKm(Coordinates a,Coordinates b){double lat1=Math.toRadians(a.latitude().doubleValue()),lat2=Math.toRadians(b.latitude().doubleValue());double dlat=lat2-lat1,dlon=Math.toRadians(b.longitude().doubleValue()-a.longitude().doubleValue());double h=Math.sin(dlat/2)*Math.sin(dlat/2)+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dlon/2)*Math.sin(dlon/2);return 6371*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));}
 
     public record RecommendationCommand(String guestPublicId, long profileId, String region, LocalDate tripDate,
@@ -214,7 +256,8 @@ public class RestaurantRecommendationService {
         public RecommendationCommand { strictExclusions = strictExclusions == null ? List.of() : List.copyOf(strictExclusions); }
     }
     public record ResultContext(String region, LocalDate tripDate, String mealType, String startMode) { }
-    public record CallSummary(int tourListCalls, int tourDetailCalls, int kakaoTransitCalls, long elapsedMillis) { }
+    public record CallSummary(int tourListCalls, int tourDetailCalls, int kakaoTransitCalls,
+            int demandStrengthCalls, int resourceDemandCalls, int kakaoLocalCalls, long elapsedMillis) { }
     public record PerspectiveResult(String perspective, String status, String message,
             List<RecommendationCore.RankedCandidate> candidates) { public PerspectiveResult { candidates = List.copyOf(candidates); } }
     public record RecommendationResult(ResultContext context, List<PerspectiveResult> perspectives,
@@ -222,5 +265,6 @@ public class RestaurantRecommendationService {
             CallSummary callSummary, String dataAvailability, String sourceAttribution, String nutritionNotice) {
         public RecommendationResult { perspectives = List.copyOf(perspectives); topCandidates=List.copyOf(topCandidates); }
     }
-    private record CandidateWithCoordinates(Candidate candidate, Coordinates coordinates) { }
+    private record CandidateWithCoordinates(Candidate candidate, Coordinates coordinates,
+            AreaDemandSignalProvider.RegionKey regionKey) { }
 }
