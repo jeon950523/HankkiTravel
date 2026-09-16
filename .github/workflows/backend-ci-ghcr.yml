@@ -82,22 +82,30 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
-      - name: Check out main
+      - name: Check out GitOps manifests
         uses: actions/checkout@v7
         with:
+          repository: jeon950523/k8s-manifests-hankki
           ref: main
-      - name: Update the Kustomize image tag
+          token: ${{ secrets.K8S_MANIFESTS_TOKEN }}
+      - name: Update the deployment image
         env:
           IMAGE_TAG: sha-${{ github.sha }}
         run: |
-          sed -i "s/^[[:space:]]*newTag: .*/    newTag: ${IMAGE_TAG}/" deploy/k8s/kustomization.yaml
-          if git diff --quiet -- deploy/k8s/kustomization.yaml; then
+          manifest=backend/deployment.yaml
+          image_pattern='^[[:space:]]*image:[[:space:]]*ghcr\.io/jeon950523/hankki_travel_back:[^[:space:]]+[[:space:]]*$'
+          if [ "$(grep -Ec "$image_pattern" "$manifest")" != "1" ]; then
+            echo "Expected exactly one backend image in ${manifest}."
+            exit 1
+          fi
+          sed -E -i "s|^([[:space:]]*image:[[:space:]]*)ghcr\.io/jeon950523/hankki_travel_back:[^[:space:]]+[[:space:]]*$|\1ghcr.io/jeon950523/hankki_travel_back:${IMAGE_TAG}|" "$manifest"
+          if git diff --quiet -- "$manifest"; then
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add deploy/k8s/kustomization.yaml
-          git commit -m "chore: 배포 이미지 태그 갱신"
+          git add "$manifest"
+          git commit -m "chore: backend image ${IMAGE_TAG} 배포"
           git push origin HEAD:main
