@@ -8,9 +8,11 @@ import kr.hankkitravel.identity.application.GuestApplicationService;
 import kr.hankkitravel.identity.model.ProfileOwnership;
 import kr.hankkitravel.profile.model.FamilyMember;
 import kr.hankkitravel.profile.model.FamilyMemberCaution;
+import kr.hankkitravel.profile.model.FamilyMemberFoodRestriction;
 import kr.hankkitravel.profile.model.FamilyProfile;
 import kr.hankkitravel.profile.model.FamilyProfileId;
 import kr.hankkitravel.profile.persistence.FamilyMemberCautionMapper;
+import kr.hankkitravel.profile.persistence.FamilyMemberFoodRestrictionMapper;
 import kr.hankkitravel.profile.persistence.FamilyMemberMapper;
 import kr.hankkitravel.profile.persistence.FamilyProfileMapper;
 import org.springframework.stereotype.Service;
@@ -29,13 +31,16 @@ public class FamilyProfileApplicationService {
     private final FamilyProfileMapper profiles;
     private final FamilyMemberMapper members;
     private final FamilyMemberCautionMapper cautions;
+    private final FamilyMemberFoodRestrictionMapper restrictions;
 
     public FamilyProfileApplicationService(GuestApplicationService guests, FamilyProfileMapper profiles,
-            FamilyMemberMapper members, FamilyMemberCautionMapper cautions) {
+            FamilyMemberMapper members, FamilyMemberCautionMapper cautions,
+            FamilyMemberFoodRestrictionMapper restrictions) {
         this.guests = guests;
         this.profiles = profiles;
         this.members = members;
         this.cautions = cautions;
+        this.restrictions = restrictions;
     }
 
     @Transactional
@@ -86,9 +91,17 @@ public class FamilyProfileApplicationService {
             var member = new FamilyMember(new FamilyProfileId(profileId), command.nickname(), index,
                     command.continuousWalkingMinutes(), command.stairsPreference());
             members.insert(member);
-            for (String caution : command.mealCautions()) {
+            var memberCautions = new java.util.LinkedHashSet<>(command.mealCautions());
+            if (command.bloodSugarCare()) {
+                memberCautions.remove("NONE");
+                memberCautions.add("SUGAR");
+                memberCautions.add("CARBOHYDRATE");
+            }
+            for (String caution : memberCautions) {
                 cautions.insert(new FamilyMemberCaution(member.getId(), caution));
             }
+            command.allergenRestrictions().forEach(value -> insertRestriction(member.getId(), "ALLERGEN", value));
+            command.avoidedFoods().forEach(value -> insertRestriction(member.getId(), "AVOID", value));
         }
     }
 
@@ -96,7 +109,9 @@ public class FamilyProfileApplicationService {
         var memberSnapshots = members.findByProfileId(profile.getId()).stream().map(member ->
                 new FamilyProfileSnapshot.Member(member.getId(), member.getNickname(), member.getContinuousWalkingMinutes(),
                         member.getStairsPreference(), cautions.findByFamilyMemberId(member.getId()).stream()
-                                .map(FamilyMemberCaution::caution).toList())).toList();
+                                .map(FamilyMemberCaution::caution).toList(),
+                        hasBloodSugarCare(member.getId()), restrictionValues(member.getId(), "ALLERGEN"),
+                        restrictionValues(member.getId(), "AVOID"))).toList();
         return new FamilyProfileSnapshot(profile.getId(), profile.getName(), profile.getTransportMode(),
                 profile.getParkingPreference(), profile.getWalkingBurdenPreference(), profile.getTransferPreference(),
                 profile.isStairsAvoidance(), memberSnapshots);
@@ -113,7 +128,8 @@ public class FamilyProfileApplicationService {
         for (MemberCommand member : command.members()) {
             if (member == null || blank(member.nickname()) || member.continuousWalkingMinutes() < 0
                     || member.continuousWalkingMinutes() > 480 || member.mealCautions() == null
-                    || member.mealCautions().isEmpty()) {
+                    || member.mealCautions().isEmpty() || member.allergenRestrictions() == null
+                    || member.avoidedFoods() == null) {
                 throw new IllegalArgumentException("구성원 정보와 주의요소를 확인해 주세요.");
             }
             require(STAIRS, member.stairsPreference());
@@ -121,6 +137,8 @@ public class FamilyProfileApplicationService {
             if (!CAUTIONS.containsAll(selections) || (selections.contains("NONE") && selections.size() > 1)) {
                 throw new IllegalArgumentException("주의요소 선택을 확인해 주세요.");
             }
+            validateRestrictions(member.allergenRestrictions());
+            validateRestrictions(member.avoidedFoods());
         }
     }
 
@@ -137,10 +155,42 @@ public class FamilyProfileApplicationService {
         public ProfileCommand { members = members == null ? null : List.copyOf(members); }
     }
     public record MemberCommand(String nickname, int continuousWalkingMinutes, String stairsPreference,
-            List<String> mealCautions) {
+            List<String> mealCautions, boolean bloodSugarCare, List<String> allergenRestrictions,
+            List<String> avoidedFoods) {
+        public MemberCommand(String nickname, int continuousWalkingMinutes, String stairsPreference,
+                List<String> mealCautions) {
+            this(nickname, continuousWalkingMinutes, stairsPreference, mealCautions, false, List.of(), List.of());
+        }
         public MemberCommand {
             mealCautions = mealCautions == null ? null : mealCautions.stream()
                     .filter(java.util.Objects::nonNull).map(value -> value.trim().toUpperCase(Locale.ROOT)).distinct().toList();
+            allergenRestrictions = cleanRestrictions(allergenRestrictions);
+            avoidedFoods = cleanRestrictions(avoidedFoods);
         }
+    }
+
+    private void insertRestriction(long memberId, String type, String display) {
+        restrictions.insert(new FamilyMemberFoodRestriction(memberId, type, normalizeRestriction(display), display.trim()));
+    }
+    private boolean hasBloodSugarCare(long memberId) {
+        var values = cautions.findByFamilyMemberId(memberId).stream().map(FamilyMemberCaution::caution).collect(java.util.stream.Collectors.toSet());
+        return values.contains("SUGAR") && values.contains("CARBOHYDRATE");
+    }
+    private List<String> restrictionValues(long memberId, String type) {
+        return restrictions.findByFamilyMemberId(memberId).stream().filter(value -> type.equals(value.restrictionType()))
+                .map(FamilyMemberFoodRestriction::displayValue).toList();
+    }
+    private static void validateRestrictions(List<String> values) {
+        if (values.size() > 20 || values.stream().anyMatch(value -> value.length() > 100)) {
+            throw new IllegalArgumentException("음식 제한 입력을 확인해 주세요.");
+        }
+    }
+    private static List<String> cleanRestrictions(List<String> values) {
+        if (values == null) return List.of();
+        return values.stream().filter(java.util.Objects::nonNull).map(String::trim).filter(value -> !value.isBlank())
+                .distinct().toList();
+    }
+    private static String normalizeRestriction(String value) {
+        return value.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ").trim();
     }
 }

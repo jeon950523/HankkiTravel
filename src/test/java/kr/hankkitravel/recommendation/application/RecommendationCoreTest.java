@@ -24,8 +24,8 @@ class RecommendationCoreTest {
         var first = core.rank(core.score(List.of(highSodium, noReference, lowSodium), sodiumFamily, mealFirst), Perspective.BALANCED);
         var second = core.rank(core.score(List.of(highSodium, noReference, lowSodium), sodiumFamily, mealFirst), Perspective.BALANCED);
 
-        assertThat(first).extracting(item -> item.candidate().candidate().contentId()).containsExactly("10", "30", "20");
-        assertThat(second).extracting(item -> item.candidate().candidate().contentId()).containsExactly("10", "30", "20");
+        assertThat(first).extracting(item -> item.candidate().candidate().contentId()).containsExactly("30", "10", "20");
+        assertThat(second).extracting(item -> item.candidate().candidate().contentId()).containsExactly("30", "10", "20");
         var missing = first.stream().filter(item -> item.candidate().candidate().contentId().equals("30")).findFirst().orElseThrow();
         assertThat(missing.candidate().dimensions().get(RecommendationCore.MEAL).state())
                 .isEqualTo(RecommendationCore.EvidenceState.NOT_EVALUATED);
@@ -42,6 +42,31 @@ class RecommendationCoreTest {
         assertThat(core.hardDecision(unavailableParking, sodiumFamily, mealFirst).included()).isFalse();
         assertThat(core.hardDecision(strictMenu, sodiumFamily,
                 new RequestContext(null, List.of("땅콩"), false, null)).included()).isFalse();
+    }
+
+    @Test void v2WeightsNormalizeOnlyEvaluatedDimensionsAndExposeCoverage() {
+        var candidate = candidate("11", "제주 향토 식당", "주차 가능", List.of(menu("국밥", "HIGH", "100")));
+        var ranked = core.rank(core.score(List.of(candidate), sodiumFamily, mealFirst), Perspective.BALANCED).getFirst();
+
+        assertThat(new RecommendationScoringProperties().weights().values().stream().mapToInt(Integer::intValue).sum()).isEqualTo(100);
+        assertThat(ranked.compatibilityScore()).isBetween(0, 100);
+        assertThat(ranked.evidenceCoverage()).isEqualTo(60);
+        assertThat(ranked.candidate().dimensions().get(RecommendationCore.AREA_DEMAND_SIGNAL).state())
+                .isEqualTo(RecommendationCore.EvidenceState.NOT_EVALUATED);
+        assertThat(ranked.candidate().dimensions().get(RecommendationCore.REVIEW_SIGNAL).state())
+                .isEqualTo(RecommendationCore.EvidenceState.NOT_EVALUATED);
+    }
+
+    @Test void explicitAllergenConflictIsExcludedButUnknownNeedsPhoneCheck() {
+        var family = new FamilyContext("CAR", "NO_PREFERENCE", 30, false, "NO_PREFERENCE", List.of("NONE"),
+                List.of("땅콩"), List.of());
+        var conflict = candidate("12", "식당", null, List.of(menu("땅콩 국수", "LOW", null)));
+        var unknown = candidate("13", "식당", null, List.of(menu("국수", "LOW", null)));
+
+        assertThat(core.hardDecision(conflict, family, mealFirst).included()).isFalse();
+        assertThat(core.hardDecision(unknown, family, mealFirst).included()).isTrue();
+        assertThat(core.score(List.of(unknown), family, mealFirst).getFirst().checks())
+                .anyMatch(text -> text.contains("전화"));
     }
 
     private Candidate candidate(String id, String title, String parking, List<MenuEvidence> menus) {

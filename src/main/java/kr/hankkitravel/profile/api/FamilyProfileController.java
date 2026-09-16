@@ -63,10 +63,11 @@ public class FamilyProfileController {
         }
     }
     public record MemberRequest(String nickname, int continuousWalkingMinutes, String stairsPreference,
-            List<String> mealCautions) {
+            List<String> mealCautions, Boolean bloodSugarCare, List<String> allergenRestrictions,
+            List<String> avoidedFoods) {
         FamilyProfileApplicationService.MemberCommand command() {
             return new FamilyProfileApplicationService.MemberCommand(nickname, continuousWalkingMinutes,
-                    stairsPreference, mealCautions);
+                    stairsPreference, mealCautions, Boolean.TRUE.equals(bloodSugarCare), allergenRestrictions, avoidedFoods);
         }
     }
     public record ProfileResponse(long profileId, String name, String transportMode, String parkingPreference,
@@ -75,10 +76,12 @@ public class FamilyProfileController {
             return new ProfileResponse(source.profileId(), source.name(), source.transportMode(), source.parkingPreference(),
                     source.walkingBurdenPreference(), source.transferPreference(), source.stairsAvoidance(),
                     source.members().stream().map(member -> new MemberResponse(member.memberId(), member.nickname(),
-                            member.continuousWalkingMinutes(), member.stairsPreference(), member.mealCautions())).toList());
+                            member.continuousWalkingMinutes(), member.stairsPreference(), member.mealCautions(),
+                            member.bloodSugarCare(), member.allergenRestrictions(), member.avoidedFoods())).toList());
         }
     }
     public record MemberResponse(long memberId, String nickname, int continuousWalkingMinutes,
-            String stairsPreference, List<String> mealCautions) { }
+            String stairsPreference, List<String> mealCautions, boolean bloodSugarCare,
+            List<String> allergenRestrictions, List<String> avoidedFoods) { }
     public record ApiError(String code, String message) { }
 }

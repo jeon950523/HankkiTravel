@@ -7,11 +7,11 @@ import kr.hankkitravel.shared.geo.Coordinates;
 
 public final class TripPlannerView {
     private TripPlannerView() { }
-    public enum SlotType { MORNING_ACTIVITY, AFTERNOON_ACTIVITY, STAY;
+    public enum SlotType { DAY_FOCUS, MORNING_ACTIVITY, AFTERNOON_ACTIVITY, STAY;
         public boolean activity(){return this!=STAY;}
     }
     public record Reference(String publicId,String slotType,String provider,String contentId,String contentType) { }
-    public record Candidate(String contentId,String contentType,String title,String imageUrl,String address,
+    public record Candidate(String contentId,String contentType,String title,String areaLabel,String imageUrl,String address,
             Coordinates coordinates,String informationEvidence,List<String> fitReasons,List<String> checkBeforeVisit,
             String sourceAttribution) { }
     public record Recommendations(String slotType,List<Candidate> candidates,CallSummary callSummary,String dataAvailability,

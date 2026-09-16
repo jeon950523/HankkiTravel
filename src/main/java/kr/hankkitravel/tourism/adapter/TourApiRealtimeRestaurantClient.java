@@ -54,6 +54,17 @@ public final class TourApiRealtimeRestaurantClient implements TourismRealtimeSou
     }
 
     @Override
+    public TourApiPage searchPlacePage(TourismRegion region, kr.hankkitravel.tourism.model.TourismContentType contentType,
+            String keyword, int pageNo, int numOfRows) {
+        if (region == null || contentType == null || keyword == null || keyword.isBlank() || pageNo < 1 || numOfRows < 1) {
+            throw new IllegalArgumentException("지역, 검색어와 페이지 범위를 확인하세요.");
+        }
+        return pageParser.parse(get("/searchKeyword2", Map.<String,Object>of("pageNo", pageNo, "numOfRows", numOfRows,
+                "keyword", keyword.trim(), "contentTypeId", contentType.code(),
+                "lDongRegnCd", region.lDongRegnCd(), "lDongSignguCd", region.lDongSignguCd())));
+    }
+
+    @Override
     public kr.hankkitravel.tourism.model.TourismLivePlace fetchPlaceDetail(String contentId) {
         validateContentId(contentId);
         return placeDetailParser.parse(get("/detailCommon2",Map.<String,Object>of("contentId",contentId)));

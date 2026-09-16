@@ -8,7 +8,12 @@ public record FamilyProfileSnapshot(long profileId, String name, String transpor
     public FamilyProfileSnapshot { members = List.copyOf(members); }
 
     public record Member(long memberId, String nickname, int continuousWalkingMinutes, String stairsPreference,
-            List<String> mealCautions) {
-        public Member { mealCautions = List.copyOf(mealCautions); }
+            List<String> mealCautions, boolean bloodSugarCare, List<String> allergenRestrictions,
+            List<String> avoidedFoods) {
+        public Member {
+            mealCautions = List.copyOf(mealCautions);
+            allergenRestrictions = List.copyOf(allergenRestrictions);
+            avoidedFoods = List.copyOf(avoidedFoods);
+        }
     }
 }

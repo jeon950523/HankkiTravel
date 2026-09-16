@@ -36,20 +36,22 @@ public class RestaurantRecommendationService {
     private final FamilyProfileApplicationService profiles;
     private final TourismRealtimeGateway tourism;
     private final TransitRouteFinder transit;
-    private final RecommendationCore core = new RecommendationCore();
+    private final RecommendationCore core;
     private final int listPageSize;
     private final int prefilterLimit;
     private final int detailLimit;
     private final int transitLimit;
 
     public RestaurantRecommendationService(FamilyProfileApplicationService profiles, TourismRealtimeGateway tourism,
-            TransitRouteFinder transit, @Value("${hankki.recommendation.list-page-size:16}") int listPageSize,
+            TransitRouteFinder transit, RecommendationScoringProperties scoring,
+            @Value("${hankki.recommendation.list-page-size:16}") int listPageSize,
             @Value("${hankki.recommendation.prefilter-limit:10}") int prefilterLimit,
             @Value("${hankki.recommendation.detail-limit:6}") int detailLimit,
             @Value("${hankki.recommendation.transit-limit:3}") int transitLimit) {
         this.profiles = profiles;
         this.tourism = tourism;
         this.transit = transit;
+        this.core = new RecommendationCore(scoring);
         if (listPageSize < 1 || prefilterLimit < 1 || detailLimit < 1 || transitLimit < 1
                 || prefilterLimit > listPageSize || detailLimit > prefilterLimit || transitLimit > detailLimit) {
             throw new IllegalArgumentException("추천 후보 호출 설정을 확인하세요.");
@@ -80,8 +82,12 @@ public class RestaurantRecommendationService {
             detailCalls++;
             String classification = live.restaurant().classification();
             if (!"MEAL".equals(classification) && !"MIXED".equals(classification)) continue;
-            var candidate = new Candidate(place.contentId(), live.detail().title(), live.detail().address(),
-                    live.detail().firstImage(), live.detail().parking(), menus(live.nutritionMatches()), null);
+            String phone=blankToNull(live.detail().telephone());
+            BigDecimal distance=command.anchor()==null||place.coordinates()==null?null:
+                    BigDecimal.valueOf(distanceKm(command.anchor(),place.coordinates())).setScale(2,java.math.RoundingMode.HALF_UP);
+            var candidate = new Candidate(place.contentId(), live.detail().title(), areaLabel(live.detail().address()),
+                    live.detail().address(), live.detail().firstImage(), live.detail().parking(), menus(live.nutritionMatches()),
+                    null,place.coordinates(),distance,phone,null,phone==null?"NONE":"TOUR_API_LIVE");
             if (core.hardDecision(candidate, family, context).included()) {
                 details.add(new CandidateWithCoordinates(candidate, place.coordinates()));
             }
@@ -123,8 +129,9 @@ public class RestaurantRecommendationService {
             perspectives.add(new PerspectiveResult(perspective.name(), requiresAnchor ? "MOVEMENT_CONTEXT_REQUIRED" : "READY",
                     requiresAnchor ? "이동편의 비교를 위해 기준 장소를 추가해 주세요." : null, candidates));
         }
+        var topCandidates=core.rank(scored,Perspective.BALANCED);
         return new RecommendationResult(new ResultContext(region, command.tripDate(), command.mealType(), command.startMode()),
-                perspectives, scored.size(), new CallSummary(1, detailCalls, transitCalls,
+                perspectives, topCandidates, scored.size(), new CallSummary(1, detailCalls, transitCalls,
                         Duration.ofNanos(System.nanoTime() - started).toMillis()),
                 transitUnavailable ? "TRANSIT_PARTIALLY_UNAVAILABLE" : "CURRENT_DATA", ATTRIBUTION, NUTRITION_NOTICE);
     }
@@ -134,8 +141,10 @@ public class RestaurantRecommendationService {
                 .min().orElse(0);
         List<String> cautions = profile.members().stream().flatMap(member -> member.mealCautions().stream())
                 .filter(value -> !"NONE".equals(value)).distinct().toList();
+        List<String> allergens=profile.members().stream().flatMap(member->member.allergenRestrictions().stream()).distinct().toList();
+        List<String> avoided=profile.members().stream().flatMap(member->member.avoidedFoods().stream()).distinct().toList();
         return new FamilyContext(profile.transportMode(), profile.parkingPreference(), shortestWalking,
-                profile.stairsAvoidance(), profile.transferPreference(), cautions);
+                profile.stairsAvoidance(), profile.transferPreference(), cautions,allergens,avoided);
     }
 
     private List<MenuEvidence> menus(List<TourismNutritionEvidence> source) {
@@ -195,6 +204,9 @@ public class RestaurantRecommendationService {
         try { return Long.compare(Long.parseLong(left), Long.parseLong(right)); }
         catch (NumberFormatException ignored) { return left.compareTo(right); }
     }
+    private static String blankToNull(String value){return value==null||value.isBlank()?null:value.trim();}
+    private static String areaLabel(String address){if(address==null||address.isBlank())return null;var parts=address.trim().split("\\s+");return String.join(" ",java.util.Arrays.copyOf(parts,Math.min(3,parts.length)));}
+    private static double distanceKm(Coordinates a,Coordinates b){double lat1=Math.toRadians(a.latitude().doubleValue()),lat2=Math.toRadians(b.latitude().doubleValue());double dlat=lat2-lat1,dlon=Math.toRadians(b.longitude().doubleValue()-a.longitude().doubleValue());double h=Math.sin(dlat/2)*Math.sin(dlat/2)+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dlon/2)*Math.sin(dlon/2);return 6371*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));}
 
     public record RecommendationCommand(String guestPublicId, long profileId, String region, LocalDate tripDate,
             String mealType, String startMode, Coordinates anchor, String desiredLocalFood, List<String> strictExclusions,
@@ -205,9 +217,10 @@ public class RestaurantRecommendationService {
     public record CallSummary(int tourListCalls, int tourDetailCalls, int kakaoTransitCalls, long elapsedMillis) { }
     public record PerspectiveResult(String perspective, String status, String message,
             List<RecommendationCore.RankedCandidate> candidates) { public PerspectiveResult { candidates = List.copyOf(candidates); } }
-    public record RecommendationResult(ResultContext context, List<PerspectiveResult> perspectives, int candidateCount,
+    public record RecommendationResult(ResultContext context, List<PerspectiveResult> perspectives,
+            List<RecommendationCore.RankedCandidate> topCandidates, int candidateCount,
             CallSummary callSummary, String dataAvailability, String sourceAttribution, String nutritionNotice) {
-        public RecommendationResult { perspectives = List.copyOf(perspectives); }
+        public RecommendationResult { perspectives = List.copyOf(perspectives); topCandidates=List.copyOf(topCandidates); }
     }
     private record CandidateWithCoordinates(Candidate candidate, Coordinates coordinates) { }
 }

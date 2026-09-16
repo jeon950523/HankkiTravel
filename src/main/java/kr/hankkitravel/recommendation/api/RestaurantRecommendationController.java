@@ -64,12 +64,13 @@ public class RestaurantRecommendationController {
     public record AnchorRequest(BigDecimal longitude, BigDecimal latitude) {
         Coordinates coordinates() { return new Coordinates(longitude, latitude); }
     }
-    public record RecommendationResponse(Context context, List<PerspectiveResponse> perspectives, int candidateCount,
+    public record RecommendationResponse(Context context, List<PerspectiveResponse> perspectives,
+            List<RestaurantResponse> topCandidates, int candidateCount,
             CallSummary callSummary, String dataAvailability, String sourceAttribution, String nutritionNotice) {
         public static RecommendationResponse from(RestaurantRecommendationService.RecommendationResult result) {
             return new RecommendationResponse(new Context(result.context().region(), result.context().tripDate(),
                     result.context().mealType(), result.context().startMode()), result.perspectives().stream()
-                    .map(PerspectiveResponse::from).toList(), result.candidateCount(),
+                    .map(PerspectiveResponse::from).toList(),result.topCandidates().stream().map(RestaurantResponse::from).toList(), result.candidateCount(),
                     new CallSummary(result.callSummary().tourListCalls(), result.callSummary().tourDetailCalls(),
                             result.callSummary().kakaoTransitCalls(), result.callSummary().elapsedMillis()),
                     result.dataAvailability(), result.sourceAttribution(), result.nutritionNotice());
@@ -83,23 +84,30 @@ public class RestaurantRecommendationController {
                     result.candidates().stream().map(RestaurantResponse::from).toList());
         }
     }
-    public record RestaurantResponse(String contentId, String title, String address, String imageUrl, int compatibilityScore,
-            int evaluatedWeight, String informationEvidence, List<String> ourFamilyFitReasons,
+    public record RestaurantResponse(String contentId, String title, String areaLabel, String address,
+            kr.hankkitravel.shared.geo.Coordinates coordinates, String imageUrl, int compatibilityScore, int overallScore,
+            int evaluatedWeight, int evidenceCoverage, String informationEvidence, String phone, String placeUrl,
+            String contactEvidence, List<String> ourFamilyFitReasons,
             List<String> ourFamilyCautions, List<String> checkBeforeVisit, List<NutritionResponse> nutritionEvidence,
             TransportResponse transportEvidence, List<DimensionResponse> evaluatedDimensions) {
         static RestaurantResponse from(RecommendationCore.RankedCandidate item) {
             var candidate = item.candidate();
             var restaurant = candidate.candidate();
             var transit = restaurant.transit();
-            return new RestaurantResponse(restaurant.contentId(), restaurant.title(), restaurant.address(), restaurant.imageUrl(),
-                    item.compatibilityScore(), item.evaluatedWeight(), candidate.informationEvidence().name(),
+            return new RestaurantResponse(restaurant.contentId(), restaurant.title(), restaurant.areaLabel(),restaurant.address(),
+                    restaurant.coordinates(),restaurant.imageUrl(), item.compatibilityScore(),item.compatibilityScore(),
+                    item.evaluatedWeight(),item.evidenceCoverage(),candidate.informationEvidence().name(),restaurant.phone(),
+                    restaurant.placeUrl(),restaurant.contactEvidence(),
                     candidate.positives(), candidate.cautions(), candidate.checks(), restaurant.menus().stream()
                     .filter(MenuEvidenceView::displayable).map(MenuEvidenceView::from).toList(), transit == null ? null
                     : new TransportResponse(transit.totalTimeMinutes(), transit.transferCount(), transit.explicitWalkingDistanceMeters(),
                             transit.unaccountedDistanceMeters() > 0, transit.landingUrl()), candidate.dimensions().entrySet().stream()
-                    .map(entry -> new DimensionResponse(entry.getKey(), entry.getValue().score(), entry.getValue().state().name()))
+                    .map(entry -> new DimensionResponse(entry.getKey(),label(entry.getKey()),entry.getValue().weight(),
+                            entry.getValue().evaluated(),entry.getValue().awardedPoints(),entry.getValue().maxPoints(),
+                            entry.getValue().state().name(),entry.getValue().reasons(),entry.getValue().score()))
                     .toList());
         }
+        private static String label(String code){return switch(code){case RecommendationCore.FAMILY_MEAL_FIT->"식사 조건";case RecommendationCore.TRIP_ROUTE_FIT->"여행 동선";case RecommendationCore.MOBILITY_FIT->"이동 편의";case RecommendationCore.AREA_DEMAND_SIGNAL->"지역 방문 수요";case RecommendationCore.REVIEW_SIGNAL->"후기/평판";default->"지역/메뉴";};}
     }
     public record NutritionResponse(String menuName, String matchLevel, String standardFood, String referenceLabel) { }
     private record MenuEvidenceView(String rawName, String matchLevel, String standardFood) {
@@ -113,6 +121,7 @@ public class RestaurantRecommendationController {
     }
     public record TransportResponse(BigDecimal totalTimeMinutes, int transferCount, long explicitWalkingDistanceMeters,
             boolean walkingDetailCheckRequired, String kakaoMapLandingUrl) { }
-    public record DimensionResponse(String dimension, int score, String evidenceState) { }
+    public record DimensionResponse(String code,String label,int weight,boolean evaluated,int awardedPoints,
+            int maxPoints,String evidenceState,List<String> reasons,int score) { }
     public record ApiError(String code, String message) { }
 }

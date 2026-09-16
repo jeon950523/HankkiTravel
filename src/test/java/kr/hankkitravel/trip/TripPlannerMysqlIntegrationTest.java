@@ -62,6 +62,10 @@ class TripPlannerMysqlIntegrationTest {
             else list=region==TourismRegion.JEJU_CITY?List.of(place("32001","32",region)):List.of();
             return new TourApiPage(list,1,15,list.size());
         });
+        when(source.searchPlacePage(any(),any(),anyString(),anyInt(),anyInt())).thenAnswer(inv->{
+            TourismRegion region=inv.getArgument(0);var item=place(region==TourismRegion.JEJU_CITY?"12001":"12002","12",region);
+            return new TourApiPage(List.of(item),1,15,1);
+        });
         when(source.fetchPlaceDetail(anyString())).thenAnswer(inv->{assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();return live(inv.getArgument(0));});
         when(transit.findRoutes(any(),any())).thenAnswer(inv->{assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
             return new TransitResult(TransitResult.Status.OK,List.of(new TransitRoute(new BigDecimal("25.5"),5000,1,1500,"PUBLIC_TRANSIT",List.of(),500,900,"https://map.kakao.test")),"https://map.kakao.test");});
@@ -89,6 +93,29 @@ class TripPlannerMysqlIntegrationTest {
         planner.clear(guest,trip.tripPublicId(),1,TripPlannerView.SlotType.MORNING_ACTIVITY);
         planner.clear(guest,trip.tripPublicId(),1,TripPlannerView.SlotType.MORNING_ACTIVITY);
     }
+    @Test void dayFocusRecommendSearchSelectClearAndPlannerDeduplicateWork() throws Exception {
+        assertThat(planner.recommendFocus(guest,trip.tripPublicId(),1).candidates()).isNotEmpty();
+        assertThat(planner.searchFocus(guest,trip.tripPublicId(),1,"성산").candidates()).isNotEmpty();
+        planner.select(guest,trip.tripPublicId(),1,TripPlannerView.SlotType.DAY_FOCUS,"12001");
+        planner.select(guest,trip.tripPublicId(),1,TripPlannerView.SlotType.MORNING_ACTIVITY,"12001");
+        var view=planner.planner(guest,trip.tripPublicId(),1);
+        assertThat(view.items()).filteredOn(item->"12001".equals(item.contentId())).hasSize(1);
+        assertThat(view.items().getFirst().slotType()).isEqualTo("DAY_FOCUS");
+        String base="http://localhost:"+port+"/api/guests/"+guest+"/trips/"+trip.tripPublicId()+"/days/1";
+        assertThat(request("POST",base+"/focus-recommendations",null).statusCode()).isEqualTo(200);
+        assertThat(request("GET",base+"/focus-search?keyword=%EC%84%B1%EC%82%B0",null).statusCode()).isEqualTo(200);
+        assertThat(request("DELETE",base+"/place-anchors/DAY_FOCUS",null).statusCode()).isEqualTo(204);
+    }
+
+    @Test void profileV2PersistsBloodSugarMappingAndMemberRestrictions() {
+        var saved=profiles.create(guest,new FamilyProfileApplicationService.ProfileCommand("profile v2","CAR","PREFERRED","NORMAL","NO_PREFERENCE",false,
+                List.of(new FamilyProfileApplicationService.MemberCommand("member",20,"NEUTRAL",List.of("NONE"),true,List.of("땅콩"),List.of("고수")))));
+        var member=profiles.get(guest,saved.profileId()).members().getFirst();
+        assertThat(member.bloodSugarCare()).isTrue();
+        assertThat(member.mealCautions()).contains("SUGAR","CARBOHYDRATE").doesNotContain("NONE");
+        assertThat(member.allergenRestrictions()).containsExactly("땅콩");
+        assertThat(member.avoidedFoods()).containsExactly("고수");
+    }
     @Test void plannerHydratesChronologicalItemsAndOnlyAdjacentTransit(){
         planner.select(guest,trip.tripPublicId(),1,TripPlannerView.SlotType.MORNING_ACTIVITY,"12001");
         planner.select(guest,trip.tripPublicId(),1,TripPlannerView.SlotType.AFTERNOON_ACTIVITY,"12002");
@@ -114,7 +141,7 @@ class TripPlannerMysqlIntegrationTest {
         planner.select(guest,trip.tripPublicId(),1,TripPlannerView.SlotType.MORNING_ACTIVITY,"12001");
         long day=jdbc.queryForObject("SELECT id FROM trip_days WHERE trip_id=(SELECT id FROM trips WHERE public_id=?) AND day_number=1",Long.class,trip.tripPublicId());
         assertThatThrownBy(()->jdbc.update("INSERT INTO trip_day_place_anchors(public_id,trip_day_id,slot_type,provider,content_id,content_type) VALUES(?,?, 'MORNING_ACTIVITY','KTO','12002','12')",UUID.randomUUID().toString(),day)).isInstanceOf(DataIntegrityViolationException.class);
-        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("12");assertThat(flyway.info().pending()).isEmpty();assertThat(flyway.migrate().migrationsExecuted).isZero();
+        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("13");assertThat(flyway.info().pending()).isEmpty();assertThat(flyway.migrate().migrationsExecuted).isZero();
         trips.delete(guest,trip.tripPublicId());assertThat(count("trip_day_place_anchors")).isEqualTo(before);
     }
     @Test void httpResponsesAreNoStoreAndExposeNoPayloadPersistenceFields() throws Exception{

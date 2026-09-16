@@ -11,5 +11,6 @@ public interface TourismRealtimeSource {
     TourApiPage fetchRestaurantPage(TourismRegion region, int pageNo, int numOfRows);
     TourismRestaurantDetail fetchRestaurantDetail(String contentId);
     TourApiPage fetchPlacePage(TourismRegion region, TourismContentType contentType, int pageNo, int numOfRows);
+    TourApiPage searchPlacePage(TourismRegion region, TourismContentType contentType, String keyword, int pageNo, int numOfRows);
     TourismLivePlace fetchPlaceDetail(String contentId);
 }

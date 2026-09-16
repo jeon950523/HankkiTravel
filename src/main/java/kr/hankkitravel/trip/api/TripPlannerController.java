@@ -16,6 +16,12 @@ public class TripPlannerController {
     @PostMapping("/place-recommendations")
     public ResponseEntity<TripPlannerView.Recommendations> places(@PathVariable String guestPublicId,@PathVariable String tripPublicId,
             @PathVariable int dayNumber,@RequestBody PlaceRecommendationRequest request){return response(200,planner.recommendActivities(guestPublicId,tripPublicId,dayNumber,request.slotType()));}
+    @PostMapping("/focus-recommendations")
+    public ResponseEntity<TripPlannerView.Recommendations> focus(@PathVariable String guestPublicId,@PathVariable String tripPublicId,
+            @PathVariable int dayNumber){return response(200,planner.recommendFocus(guestPublicId,tripPublicId,dayNumber));}
+    @GetMapping("/focus-search")
+    public ResponseEntity<TripPlannerView.Recommendations> focusSearch(@PathVariable String guestPublicId,@PathVariable String tripPublicId,
+            @PathVariable int dayNumber,@RequestParam String keyword){return response(200,planner.searchFocus(guestPublicId,tripPublicId,dayNumber,keyword));}
     @PostMapping("/stay-recommendations")
     public ResponseEntity<TripPlannerView.Recommendations> stays(@PathVariable String guestPublicId,@PathVariable String tripPublicId,@PathVariable int dayNumber){return response(200,planner.recommendStay(guestPublicId,tripPublicId,dayNumber));}
     @PutMapping("/place-anchors/{slotType}")

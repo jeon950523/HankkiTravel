@@ -14,13 +14,19 @@ public class TripDecisionService {
     private final TripScheduleService schedules;
     private final RestaurantRecommendationService recommendations;
     private final TourismRealtimeGateway tourism;
-    public TripDecisionService(TripScheduleService schedules,RestaurantRecommendationService recommendations,TourismRealtimeGateway tourism) {
-        this.schedules=schedules; this.recommendations=recommendations; this.tourism=tourism;
+    private final TripPlaceScheduleService places;
+    public TripDecisionService(TripScheduleService schedules,RestaurantRecommendationService recommendations,
+            TourismRealtimeGateway tourism,TripPlaceScheduleService places) {
+        this.schedules=schedules; this.recommendations=recommendations; this.tourism=tourism; this.places=places;
     }
     public RestaurantRecommendationService.RecommendationResult recommend(String guest,String trip,String slot) {
         var c=schedules.context(guest,trip,slot);
+        var focus=places.references(guest,trip,c.dayNumber()).places().stream()
+                .filter(value->"DAY_FOCUS".equals(value.getSlotType())).findFirst().orElse(null);
+        kr.hankkitravel.shared.geo.Coordinates anchor=null;
+        if(focus!=null){try{anchor=tourism.place(focus.getContentId()).coordinates();}catch(RuntimeException ignored){}}
         return recommendations.recommend(new RestaurantRecommendationService.RecommendationCommand(guest,c.profileId(),
-                c.regionKey(),c.travelDate(),c.mealType(),"MEAL_FIRST",null,null,List.of(),null));
+                c.regionKey(),c.travelDate(),c.mealType(),anchor==null?"MEAL_FIRST":"PLACE_FIRST",anchor,null,List.of(),null));
     }
     public TripView.Anchor select(String guest,String trip,String slot,String contentId) {
         var c=schedules.context(guest,trip,slot);

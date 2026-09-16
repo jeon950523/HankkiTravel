@@ -44,6 +44,14 @@ public class TourismRealtimeGateway {
         return source.fetchPlacePage(region,type,page+1,size);
     }
 
+    public TourApiPage searchPlaces(TourismRegion region, TourismContentType type, String keyword, int page, int size) {
+        if (region == null || type == null || keyword == null || keyword.isBlank() || keyword.trim().length() > 100
+                || page < 0 || size < 1 || size > maxPageSize) {
+            throw new IllegalArgumentException("검색어와 페이지 범위를 확인하세요.");
+        }
+        return source.searchPlacePage(region, type, keyword.trim(), page + 1, size);
+    }
+
     public TourismLivePlace place(String contentId) {
         if(contentId==null||!contentId.matches("[0-9]{1,20}")) throw new IllegalArgumentException("콘텐츠 ID 형식을 확인하세요.");
         return source.fetchPlaceDetail(contentId);

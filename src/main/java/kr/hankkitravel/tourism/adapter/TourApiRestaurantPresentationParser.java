@@ -35,7 +35,7 @@ public class TourApiRestaurantPresentationParser {
             if (!item.isObject()) return empty();
             var detail = mapper.treeToValue(item, DetailItem.class);
             return new TourismRestaurantPresentation(detail.title(), detail.addr1(), detail.firstimage(),
-                    detail.contentid(), detail.contenttypeid(), detail.lDongRegnCd(), detail.lDongSignguCd());
+                    detail.contentid(), detail.contenttypeid(), detail.lDongRegnCd(), detail.lDongSignguCd(), detail.tel());
         } catch (IntegrationException exception) {
             throw exception;
         } catch (JacksonException | IllegalArgumentException exception) {
@@ -51,7 +51,7 @@ public class TourApiRestaurantPresentationParser {
             Element item = first(document, "item");
             if (item == null) return empty();
             return new TourismRestaurantPresentation(text(item, "title"), text(item, "addr1"), text(item, "firstimage"),
-                    text(item, "contentid"), text(item, "contenttypeid"), text(item, "lDongRegnCd"), text(item, "lDongSignguCd"));
+                    text(item, "contentid"), text(item, "contenttypeid"), text(item, "lDongRegnCd"), text(item, "lDongSignguCd"), text(item,"tel"));
         } catch (IntegrationException exception) {
             throw exception;
         } catch (Exception exception) {
@@ -94,5 +94,5 @@ public class TourApiRestaurantPresentationParser {
     @JsonIgnoreProperties(ignoreUnknown = true) record Header(String resultCode) {}
     @JsonIgnoreProperties(ignoreUnknown = true) record Body(JsonNode items) {}
     @JsonIgnoreProperties(ignoreUnknown = true) record DetailItem(String title, String addr1, String firstimage,
-            String contentid, String contenttypeid, String lDongRegnCd, String lDongSignguCd) {}
+            String contentid, String contenttypeid, String lDongRegnCd, String lDongSignguCd, String tel) {}
 }

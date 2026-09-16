@@ -99,7 +99,8 @@ class ModuleBoundaryTest {
         var ownership = Map.ofEntries(
                 Map.entry("foundation_metadata", "foundation"), Map.entry("users", "identity"),
                 Map.entry("guests", "identity"), Map.entry("family_profiles", "profile"),
-                Map.entry("family_members", "profile"), Map.entry("family_member_cautions", "profile"), Map.entry("tourism_places", "tourism"),
+                Map.entry("family_members", "profile"), Map.entry("family_member_cautions", "profile"),
+                Map.entry("family_member_food_restrictions", "profile"), Map.entry("tourism_places", "tourism"),
                 Map.entry("tourism_sync_runs", "tourism"), Map.entry("tourism_sync_scope_states", "tourism"),
                 Map.entry("restaurants", "restaurant"), Map.entry("trips", "trip"),
                 Map.entry("trip_days", "trip"), Map.entry("trip_meal_slots", "trip"), Map.entry("meal_anchors", "trip"),
@@ -133,7 +134,7 @@ class ModuleBoundaryTest {
                 assertThat(found).as(method.toString()).isTrue();
             }
         }
-        assertThat(mapperCount).isEqualTo(17);
+        assertThat(mapperCount).isEqualTo(18);
     }
 
     @Test void tripPlannerHasNoLocalTourismCacheDependency() throws Exception {

@@ -52,7 +52,7 @@ public class TripScheduleService {
     public SlotContext context(String guest,String trip,String slot) {
         var owned=owned(guest,trip,false); var found=slot(owned.getId(),slot);
         var day=mapper.days(owned.getId()).stream().filter(d -> d.getId().equals(found.getTripDayId())).findFirst().orElseThrow();
-        return new SlotContext(owned.getProfileId(),owned.getRegionKey(),day.getTravelDate(),found.getMealType());
+        return new SlotContext(owned.getProfileId(),owned.getRegionKey(),day.getTravelDate(),found.getMealType(),day.getDayNumber());
     }
     @Transactional
     public TripView.Anchor select(String guest,String trip,String slot,ValidatedAnchor anchor) {
@@ -86,6 +86,6 @@ public class TripScheduleService {
         return new TripView(trip.getPublicId(),trip.getProfileId(),trip.getRegionKey(),trip.getStartDate(),trip.getEndDate(),duration(trip),days);
     }
     private int duration(TripRows.Schedule trip) { return (int)ChronoUnit.DAYS.between(trip.getStartDate(),trip.getEndDate())+1; }
-    public record SlotContext(long profileId,String regionKey,java.time.LocalDate travelDate,String mealType) { }
+    public record SlotContext(long profileId,String regionKey,java.time.LocalDate travelDate,String mealType,int dayNumber) { }
     public record ValidatedAnchor(String contentId,String contentType) { }
 }
