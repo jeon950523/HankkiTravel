@@ -8,7 +8,7 @@ const slotKey = (trip, slot) => `${trip}:${slot}`
 export const useTripsStore = defineStore('trips', {
   state: () => ({
     detail: null, restaurantResults: {}, placeResults: {}, focusResults: {}, selectedFocus: {}, planners: {},
-    loading: false, actionLoading: '', error: null,
+    plannerLoading: {}, plannerErrors: {}, loading: false, actionLoading: '', error: null,
   }),
   actions: {
     async run(name, task) {
@@ -94,11 +94,20 @@ export const useTripsStore = defineStore('trips', {
       })
     },
     async loadPlanner(guest, trip, dayNumber) {
-      return this.run(`planner:${dayNumber}`, async () => {
+      const key = dayKey(trip, dayNumber)
+      if (this.plannerLoading[key]) return null
+      this.plannerLoading[key] = true
+      delete this.plannerErrors[key]
+      try {
         const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/planner`)
-        this.planners[dayKey(trip, dayNumber)] = result
+        this.planners[key] = result
         return result
-      })
+      } catch (error) {
+        this.plannerErrors[key] = error.message || '오늘 일정을 불러오지 못했어요.'
+        throw error
+      } finally {
+        delete this.plannerLoading[key]
+      }
     },
   },
 })
