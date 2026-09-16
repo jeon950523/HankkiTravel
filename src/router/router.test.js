@@ -17,7 +17,7 @@ describe('제품 경로와 실제 상태를 구분하는 Shell', () => {
  it.each([
   ['/', '좋은 한 끼가,'], ['/login', '카카오로 계속하기'],
   ['/profiles', '가족의 여행 이야기를 기다려요'], ['/profiles/new', '프로필 저장'],
-  ['/travel/new', '이번 한 끼를'], ['/auth/callback', '로그인 연결을'],
+  ['/travel/new', '한 끼를 중심으로'], ['/travel/trip-id', '여행을 불러오지 못했어요'], ['/auth/callback', '로그인 연결을'],
   ['/admin/sync', '관광 데이터 동기화 운영'], ['/unknown', '이 페이지를'],
  ])('%s 렌더와 제목 계약', async (path, text) => {
   const { html, router } = await render(path)
@@ -31,7 +31,7 @@ describe('제품 경로와 실제 상태를 구분하는 Shell', () => {
  })
  it('Home의 두 CTA는 Guest 시작을 거쳐 서로 다른 여행 시작 의도를 전달한다', async () => {
   const {html} = await render('/')
-  expect(html).toContain('한 끼부터 찾기')
+  expect(html).toContain('여행 시작하기')
   expect(html).toContain('장소부터 찾기')
   expect(html).toContain('로그인 없이 가족 프로필')
  })
@@ -53,7 +53,7 @@ describe('제품 경로와 실제 상태를 구분하는 Shell', () => {
  })
  it('미지원 시작 query는 기본 식사 흐름만 표시한다', async () => {
   const {html} = await render('/travel/new?start=untrusted-marker')
-  expect(html).toContain('먹고 싶은 한 끼에서 시작해요')
+  expect(html).toContain('여행 만들기 · STEP 1 / 5')
   expect(html).not.toContain('untrusted-marker')
  })
  it('진단 화면은 제품 내비게이션과 분리한다', async () => {

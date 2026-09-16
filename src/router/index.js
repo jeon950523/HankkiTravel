@@ -4,6 +4,7 @@ import LoginView from '../views/LoginView.vue'
 import ProfilesView from '../views/ProfilesView.vue'
 import ProfileEditorView from '../views/ProfileEditorView.vue'
 import TravelStartView from '../views/TravelStartView.vue'
+import TripJourneyView from '../views/TripJourneyView.vue'
 import AuthCallbackView from '../views/AuthCallbackView.vue'
 import AdminSyncView from '../views/AdminSyncView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
@@ -15,6 +16,8 @@ export const routes = [
   { path: '/profiles/new', name: 'profile-new', component: ProfileEditorView, meta: { title: '새 가족 프로필' } },
   { path: '/profiles/:profileId/edit', name: 'profile-edit', component: ProfileEditorView, meta: { title: '가족 프로필 수정' } },
   { path: '/travel/new', name: 'travel-new', component: TravelStartView, meta: { title: '여행 시작' } },
+  { path: '/travel/:tripPublicId', name: 'trip-journey', component: TripJourneyView, meta: { title: '한 끼 여행' } },
+  { path: '/travel/:tripPublicId/day/:dayNumber', redirect: to => `/travel/${to.params.tripPublicId}?day=${to.params.dayNumber}` },
   { path: '/auth/callback', name: 'auth-callback', component: AuthCallbackView, meta: { title: '로그인 연결 안내' } },
   { path: '/admin/sync', name: 'admin-sync', component: AdminSyncView, meta: { title: '관광 데이터 동기화 운영', standalone: true } },
   ...(import.meta.env.DEV ? [{ path: '/dev/diagnostics', name: 'diagnostics', component: () => import('../views/FoundationView.vue'), meta: { title: '개발용 연결 진단', standalone: true } }] : []),

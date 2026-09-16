@@ -11,7 +11,7 @@ it('reflects UP only after a successful backend response', async () => {
   expect(store.status).toBe('loading')
   await pending
   expect(store.status).toBe('up')
-  expect(fetch).toHaveBeenCalledWith('/actuator/health', expect.objectContaining({ cache: 'no-store' }))
+  expect(fetch).toHaveBeenCalledWith(expect.stringMatching(/\/actuator\/health$/), expect.objectContaining({ cache: 'no-store' }))
 })
 it.each([
   { ok: false }, { ok: true, json: async () => ({ status: 'DOWN' }) },

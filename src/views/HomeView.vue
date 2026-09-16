@@ -22,7 +22,7 @@ const start = async mode => {
       <h1 tabindex="-1">좋은 한 끼가,<br />좋은 여행을 만든다.</h1>
       <p class="hero-description">먹고 싶은 한 끼, 가보고 싶은 곳.<br />우리 가족의 여행을 거기서 시작해요.</p>
       <div class="hero-actions">
-        <button class="action-button button-primary" type="button" :disabled="guest.loading" @click="start('meal')"><AppIcon name="meal" />한 끼부터 찾기<AppIcon name="arrow" /></button>
+        <button class="action-button button-primary" type="button" :disabled="guest.loading" @click="start('meal')"><AppIcon name="meal" />여행 시작하기<AppIcon name="arrow" /></button>
         <button class="action-button button-secondary" type="button" :disabled="guest.loading" @click="start('place')"><AppIcon name="place" />장소부터 찾기<AppIcon name="arrow" /></button>
       </div>
       <StatusMessage v-if="startError" kind="error" title="여행 시작 정보를 확인해 주세요">{{ startError }}</StatusMessage>

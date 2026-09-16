@@ -7,6 +7,11 @@ const readStoredGuest = () => typeof localStorage === 'undefined' ? null : local
 export const useGuestStore = defineStore('guest', {
   state: () => ({ publicId: readStoredGuest(), loading: false, error: null }),
   actions: {
+    reset() {
+      this.publicId = null
+      this.error = null
+      if (typeof localStorage !== 'undefined') localStorage.removeItem(STORAGE_KEY)
+    },
     async ensureGuest() {
       if (this.publicId) return this.publicId
       this.loading = true

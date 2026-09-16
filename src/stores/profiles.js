@@ -3,7 +3,12 @@ import { apiUrl } from '../config/api'
 
 async function jsonOrThrow(response, fallback) {
   const body = await response.json().catch(() => null)
-  if (!response.ok) throw new Error(body?.message || fallback)
+  if (!response.ok) {
+    const error = new Error(body?.message || fallback)
+    error.status = response.status
+    error.code = body?.code
+    throw error
+  }
   return body
 }
 

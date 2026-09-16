@@ -255,3 +255,69 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   .profile-card { padding: 26px; }
   .caution-grid { grid-template-columns: repeat(3, 1fr); }
 }
+
+/* BIG-03C: progressive trip decisions. Live tourism payloads remain in memory only. */
+.wizard-progress { display: flex; align-items: center; gap: 6px; margin: 28px 0 20px; padding: 0; list-style: none; }
+.wizard-progress li { flex: 1; height: 3px; background: var(--color-sand); position: relative; }
+.wizard-progress li span { position: absolute; top: -13px; left: 50%; width: 28px; height: 28px; display: grid; place-items: center; transform: translateX(-50%); border-radius: 50%; color: var(--color-secondary); background: var(--color-ivory); border: 1px solid var(--color-sand); font-size: 12px; font-weight: 700; }
+.wizard-progress li.active, .wizard-progress li.done { background: var(--color-terracotta); }
+.wizard-progress li.active span, .wizard-progress li.done span { color: white; background: var(--color-terracotta); border-color: var(--color-terracotta); }
+.wizard-panel { margin-top: 34px; display: grid; gap: 24px; }
+.wizard-panel section { display: grid; gap: 16px; }
+.wizard-options { display: grid; gap: 12px; }
+.wizard-choice { min-width: 0; min-height: 92px; display: grid; grid-template-columns: auto 1fr; align-content: center; column-gap: 12px; padding: 16px; border: 1px solid var(--color-sand); border-radius: 14px; background: #fbfaf5; }
+.wizard-choice.selected { border: 2px solid var(--color-olive); background: var(--color-soft); }
+.wizard-choice input { grid-row: 1 / 3; width: 19px; height: 19px; margin: 3px 0 0; accent-color: var(--color-olive); }
+.wizard-choice strong { color: var(--color-olive); }
+.wizard-choice span { min-width: 0; color: var(--color-secondary); font-size: 13px; overflow-wrap: anywhere; }
+.date-modes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.travel-fields label { display: grid; gap: 8px; color: var(--color-olive); font-size: 14px; font-weight: 650; }
+.travel-fields input { width: 100%; min-width: 0; min-height: 48px; padding: 10px; border: 1px solid var(--color-border-control); border-radius: 10px; background: var(--color-surface); }
+.selection-summary { color: var(--color-olive); font-weight: 700; }
+.meal-day-list { display: grid; gap: 20px; }
+.meal-day-list article { display: grid; gap: 10px; padding-top: 16px; border-top: 1px solid var(--color-sand); }
+.trip-summary { margin: 0; display: grid; gap: 4px; }
+.trip-summary div { display: grid; grid-template-columns: 96px 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--color-sand); }
+.trip-summary dt { color: var(--color-secondary); font-size: 13px; }
+.trip-summary dd { min-width: 0; margin: 0; color: var(--color-olive); font-weight: 700; overflow-wrap: anywhere; }
+.wizard-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.wizard-actions .action-button { min-width: 112px; }
+.day-switcher { display: flex; gap: 8px; margin: 26px 0; overflow-x: auto; padding-bottom: 4px; }
+.day-switcher button, .slot-switcher button { min-height: 46px; padding: 9px 16px; border-radius: 999px; border: 1px solid var(--color-border-control); color: var(--color-olive); background: transparent; white-space: nowrap; font-weight: 700; }
+.day-switcher button.active, .slot-switcher button.active { color: white; background: var(--color-olive); border-color: var(--color-olive); }
+.decision-section, .next-decisions { display: grid; gap: 18px; margin-top: 20px; }
+.step-label { color: var(--color-accent-text); font-size: 12px; font-weight: 750; letter-spacing: .05em; }
+.slot-switcher { display: flex; flex-wrap: wrap; gap: 8px; }
+.slot-switcher button { display: grid; gap: 1px; border-radius: 12px; text-align: left; }
+.slot-switcher button span { font-size: 10px; font-weight: 500; opacity: .85; }
+.decision-results, .planner-section { display: grid; gap: 16px; margin-top: 34px; }
+.decision-results > .eyebrow, .planner-section > .eyebrow { margin-bottom: -10px; }
+.empty-inline { padding: 18px; color: var(--color-secondary); background: var(--color-soft); border-radius: 12px; font-size: 14px; }
+.live-card { padding: 0; overflow: hidden; }
+.kto-image { width: 100%; aspect-ratio: 16 / 9; display: grid; place-items: center; overflow: hidden; color: var(--color-olive); background: linear-gradient(135deg, var(--color-soft), var(--color-sand)); font-size: 13px; font-weight: 700; }
+.kto-image img { width: 100%; height: 100%; object-fit: cover; }
+.live-card-body { min-width: 0; display: grid; gap: 13px; padding: 20px; }
+.facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.facts div { min-width: 0; padding: 10px; border-radius: 10px; background: var(--color-soft); }
+.facts dt { color: var(--color-secondary); font-size: 11px; }
+.facts dd { margin: 2px 0 0; color: var(--color-olive); font-weight: 750; overflow-wrap: anywhere; }
+.live-card .reason-grid h4 { margin: 0; color: var(--color-olive); font-size: 13px; }
+.live-card .action-button { width: 100%; }
+.next-actions { display: grid; gap: 10px; }
+.timeline { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.timeline > li { position: relative; padding-left: 18px; border-left: 2px solid var(--color-sage); }
+.timeline > li::before { content: ''; position: absolute; top: 24px; left: -7px; width: 12px; height: 12px; border-radius: 50%; background: var(--color-terracotta); }
+.planner-card { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; padding: 14px; }
+.planner-card .kto-image { aspect-ratio: 1; border-radius: 12px; }
+.planner-leg { margin: 8px 0 8px 14px; padding: 10px 12px; color: var(--color-secondary); background: var(--color-soft); border-radius: 10px; font-size: 12px; }
+@media (min-width: 640px) {
+  .wizard-options.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .live-card { display: grid; grid-template-columns: minmax(220px, 34%) 1fr; }
+  .live-card > .kto-image { height: 100%; aspect-ratio: auto; }
+  .next-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 390px) {
+  .date-modes { grid-template-columns: 1fr; }
+  .compact-choices:not(.date-modes) { grid-template-columns: 1fr; }
+  .planner-card { grid-template-columns: 72px minmax(0, 1fr); }
+}
