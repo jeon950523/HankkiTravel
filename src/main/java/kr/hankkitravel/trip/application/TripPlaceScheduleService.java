@@ -34,14 +34,17 @@ public class TripPlaceScheduleService {
     }
     private void requireStay(TripPlannerRows.Context c,TripPlannerView.SlotType type){if(type==TripPlannerView.SlotType.STAY&&!c.getTravelDate().isBefore(c.getEndDate()))throw TripProblem.invalid("STAY_NOT_REQUIRED");}
     private void requireDessertMeal(TripPlannerRows.Context c,TripPlannerView.SlotType type,ValidatedPlace place){
-        if(type!=TripPlannerView.SlotType.POST_MEAL_DESSERT)return;
+        String mealType=dessertMealType(type);
+        if(mealType==null)return;
         boolean selectedMeal=mapper.mealReferences(c.getDayId()).stream().anyMatch(value->
-                ("LUNCH".equals(value.getSlotType())||"DINNER".equals(value.getSlotType()))&&value.getContentId()!=null);
+                (mealType.equals(value.getSlotType())||"ANY".equals(mealType))&&value.getContentId()!=null);
         if(!selectedMeal)throw TripProblem.invalid("POST_MEAL_DESSERT_MEAL_REQUIRED");
         boolean duplicate=mapper.mealReferences(c.getDayId()).stream().anyMatch(value->place.contentId().equals(value.getContentId()))
                 ||mapper.placeReferences(c.getDayId()).stream().anyMatch(value->place.contentId().equals(value.getContentId()));
         if(duplicate)throw TripProblem.invalid("POST_MEAL_DESSERT_DUPLICATE");
     }
+    private String dessertMealType(TripPlannerView.SlotType type){return switch(type){
+        case POST_LUNCH_DESSERT->"LUNCH";case POST_DINNER_DESSERT->"DINNER";case POST_MEAL_DESSERT->"ANY";default->null;};}
     private DayContext convert(TripPlannerRows.Context c){return new DayContext(c.getTripId(),c.getDayId(),c.getTripPublicId(),c.getProfileId(),c.getRegionKey(),c.getStartDate(),c.getEndDate(),c.getDayNumber(),c.getTravelDate());}
     public record DayContext(long tripId,long dayId,String tripPublicId,long profileId,String regionKey,java.time.LocalDate startDate,
             java.time.LocalDate endDate,int dayNumber,java.time.LocalDate travelDate){public boolean lastDay(){return !travelDate.isBefore(endDate);}}

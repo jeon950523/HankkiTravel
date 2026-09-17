@@ -48,9 +48,9 @@ class PlanBDatabaseFoundationTest {
     @Autowired NutritionImportService nutritionImport;
     @Autowired NutritionFoodMapper nutritionFoods;
 
-    @Test void freshPlanBDatabaseUsesV1ThroughV14AndHasNoTourismPayloadTables() {
+    @Test void freshPlanBDatabaseUsesV1ThroughV15AndHasNoTourismPayloadTables() {
         assertThat(flyway.info().applied()).extracting(info -> info.getVersion().toString())
-                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14");
+                .containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15");
         assertThat(flyway.info().pending()).isEmpty();
         var restarted = Flyway.configure().dataSource(flyway.getConfiguration().getDataSource())
                 .locations("classpath:db/migration").cleanDisabled(true).load();
@@ -68,7 +68,8 @@ class PlanBDatabaseFoundationTest {
         assertThat(jdbc.queryForObject("""
                 SELECT COUNT(*) FROM information_schema.check_constraints
                 WHERE constraint_schema = DATABASE()
-                  AND check_clause LIKE '%POST_MEAL_DESSERT%'
+                  AND check_clause LIKE '%POST_LUNCH_DESSERT%'
+                  AND check_clause LIKE '%POST_DINNER_DESSERT%'
                 """, Integer.class)).isPositive();
 
         Path source = Path.of("src", "test", "resources", "nutrition", "20260828_음식DB_19617건.xlsx").toAbsolutePath().normalize();

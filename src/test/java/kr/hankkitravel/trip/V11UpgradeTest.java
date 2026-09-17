@@ -33,8 +33,8 @@ class V11UpgradeTest {
                     .isInstanceOf(java.sql.SQLException.class);
             var latest=Flyway.configure().dataSource(MYSQL.getJdbcUrl(),MYSQL.getUsername(),MYSQL.getPassword())
                     .locations("classpath:db/migration").cleanDisabled(true).load();
-            assertThat(latest.migrate().migrationsExecuted).isEqualTo(3);
-            assertThat(latest.info().current().getVersion().toString()).isEqualTo("14");
+            assertThat(latest.migrate().migrationsExecuted).isEqualTo(4);
+            assertThat(latest.info().current().getVersion().toString()).isEqualTo("15");
             assertThat(latest.migrate().migrationsExecuted).isZero();
         }
     }

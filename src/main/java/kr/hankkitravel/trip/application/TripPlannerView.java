@@ -7,7 +7,8 @@ import kr.hankkitravel.shared.geo.Coordinates;
 
 public final class TripPlannerView {
     private TripPlannerView() { }
-    public enum SlotType { DAY_FOCUS, MORNING_ACTIVITY, AFTERNOON_ACTIVITY, POST_MEAL_DESSERT, STAY;
+    public enum SlotType { DAY_FOCUS, MORNING_ACTIVITY, AFTERNOON_ACTIVITY, POST_MEAL_DESSERT,
+        POST_LUNCH_DESSERT, POST_DINNER_DESSERT, STAY;
         public boolean activity(){return this==DAY_FOCUS||this==MORNING_ACTIVITY||this==AFTERNOON_ACTIVITY;}
     }
     public record Reference(String publicId,String slotType,String provider,String contentId,String contentType) { }

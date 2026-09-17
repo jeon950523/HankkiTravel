@@ -18,7 +18,7 @@ public interface TripPlannerMapper {
         SELECT id,public_id AS publicId,trip_day_id AS tripDayId,slot_type AS slotType,provider,
                content_id AS contentId,content_type AS contentType
         FROM trip_day_place_anchors WHERE trip_day_id=#{dayId}
-        ORDER BY CASE slot_type WHEN 'DAY_FOCUS' THEN 0 WHEN 'MORNING_ACTIVITY' THEN 1 WHEN 'AFTERNOON_ACTIVITY' THEN 2 WHEN 'POST_MEAL_DESSERT' THEN 3 ELSE 4 END
+        ORDER BY CASE slot_type WHEN 'DAY_FOCUS' THEN 0 WHEN 'MORNING_ACTIVITY' THEN 1 WHEN 'POST_LUNCH_DESSERT' THEN 2 WHEN 'AFTERNOON_ACTIVITY' THEN 3 WHEN 'POST_DINNER_DESSERT' THEN 4 WHEN 'POST_MEAL_DESSERT' THEN 5 ELSE 6 END
         """)
     List<TripPlannerRows.Reference> placeReferences(long dayId);
     @Select("""
