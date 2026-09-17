@@ -2,7 +2,7 @@ export const MEAL_TYPES = ['BREAKFAST', 'LUNCH', 'DINNER']
 export const MEAL_LABELS = { BREAKFAST: '아침', LUNCH: '점심', DINNER: '저녁' }
 export const SLOT_LABELS = {
   DAY_FOCUS: '오늘의 중심 장소', BREAKFAST: '아침', MORNING_ACTIVITY: '오전 관광', LUNCH: '점심',
-  AFTERNOON_ACTIVITY: '오후 관광', DINNER: '저녁', POST_MEAL_DESSERT: '식후 디저트', STAY: '숙소',
+  AFTERNOON_ACTIVITY: '오후 관광', DINNER: '저녁', POST_MEAL_DESSERT: '식후 디저트', POST_LUNCH_DESSERT: '점심 후 디저트', POST_DINNER_DESSERT: '저녁 후 디저트', STAY: '숙소',
 }
 
 export function addDays(date, amount) {
@@ -40,6 +40,7 @@ export function buildTripPayload(draft) {
 
 export const showStayForDay = (dayNumber, duration) => duration > 1 && dayNumber < duration
 export const activitySlotForMeal = mealType => mealType === 'BREAKFAST' ? 'MORNING_ACTIVITY' : 'AFTERNOON_ACTIVITY'
+export const dessertSlotForMeal = mealType => mealType === 'LUNCH' ? 'POST_LUNCH_DESSERT' : 'POST_DINNER_DESSERT'
 export const transitSummary = leg => leg?.dataAvailability === 'CURRENT_DATA'
   ? `대중교통 예상 ${Math.round(leg.durationMinutes)}분 · 환승 ${leg.transferCount}회 · 명시 도보 ${leg.explicitWalkingDistanceMeters}m`
   : '이동 정보는 현재 확인이 어려워요. 지도에서 한 번 더 확인해 주세요.'

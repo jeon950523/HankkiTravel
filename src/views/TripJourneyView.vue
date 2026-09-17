@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 import KakaoDayMap from '../components/KakaoDayMap.vue'
 import KtoImage from '../components/KtoImage.vue'
 import StatusMessage from '../components/StatusMessage.vue'
-import { activitySlotForMeal, MEAL_LABELS, showStayForDay, SLOT_LABELS, transitSummary } from '../domain/trip'
+import { activitySlotForMeal, dessertSlotForMeal, MEAL_LABELS, showStayForDay, SLOT_LABELS, transitSummary } from '../domain/trip'
 import { buildPlannerDisplayItems, carRouteNotice } from '../domain/plannerMap'
 import { ATTRACTION_PERSPECTIVES, burdenLabel, dayBurdenSummary, movementEvidence, perspectiveCandidates } from '../domain/routeAwareAttraction'
 import { useGuestStore } from '../stores/guest'
@@ -32,12 +32,12 @@ const dayKey = computed(() => `${tripId.value}:${dayNumber.value}`)
 const focusResult = computed(() => trips.focusResults[dayKey.value])
 const selectedFocus = computed(() => trips.selectedFocus[dayKey.value] || planner.value?.items?.find(item => item.slotType === 'DAY_FOCUS'))
 const hasDayFocus = computed(() => Boolean(selectedFocus.value))
-const dessertResult = computed(() => trips.dessertResults[dayKey.value])
+const dessertResult = computed(() => selectedSlot.value ? trips.dessertResults[`${dayKey.value}:${selectedSlot.value.mealType}`] : null)
 const placeResult = computed(() => activePlaceType.value ? trips.placeResults[`${tripId.value}:${dayNumber.value}:${activePlaceType.value}`] : null)
 const placeCandidates = computed(() => activePlaceType.value === 'STAY' ? (placeResult.value?.candidates || []) : perspectiveCandidates(placeResult.value, activeAttractionPerspective.value))
 const activePerspective = computed(() => placeResult.value?.perspectives?.find(item => item.perspective === activeAttractionPerspective.value))
 const planner = computed(() => trips.planners[`${tripId.value}:${dayNumber.value}`])
-const plannerItems = computed(() => buildPlannerDisplayItems(planner.value?.items || []))
+const plannerItems = computed(() => hasDayFocus.value ? buildPlannerDisplayItems(planner.value?.items || []) : [])
 const plannerLoading = computed(() => Boolean(trips.plannerLoading[dayKey.value]))
 const plannerError = computed(() => trips.plannerErrors[dayKey.value])
 const regionName = computed(() => ({ JEJU: '제주', GYEONGJU: '경주' }[trips.detail?.regionKey] || ''))
@@ -75,8 +75,14 @@ async function selectFocus(candidate) { const selected = await trips.selectFocus
 async function clearFocus() { await trips.clearFocus(guestId.value, tripId.value, dayNumber.value).catch(() => {}) }
 async function recommendMeal() { if (selectedSlot.value) await trips.recommendMeal(guestId.value, tripId.value, selectedSlot.value.mealSlotPublicId).catch(() => {}) }
 async function selectMeal(contentId) { const selected = await trips.selectMeal(guestId.value, tripId.value, selectedSlot.value.mealSlotPublicId, contentId).catch(() => null); if (selected) await loadPlanner() }
-async function recommendDessert() { await trips.recommendDessert(guestId.value, tripId.value, dayNumber.value).catch(() => {}) }
-async function selectDessert(candidate) { const selected = await trips.selectPlace(guestId.value, tripId.value, dayNumber.value, 'POST_MEAL_DESSERT', candidate.contentId).catch(() => null); if (selected) { selectedPlaces.value[selectionKey('POST_MEAL_DESSERT')] = candidate; await loadPlanner() } }
+async function recommendDessert() {
+  if (selectedSlot.value?.mealType) await trips.recommendDessert(guestId.value, tripId.value, dayNumber.value, selectedSlot.value.mealType).catch(() => {})
+}
+async function selectDessert(candidate) {
+  const type = dessertSlotForMeal(selectedSlot.value.mealType)
+  const selected = await trips.selectPlace(guestId.value, tripId.value, dayNumber.value, type, candidate.contentId).catch(() => null)
+  if (selected) { selectedPlaces.value[selectionKey(type)] = candidate; await loadPlanner() }
+}
 async function recommendPlace(type) {
   activePlaceType.value = type
   if (type !== 'STAY') activeAttractionPerspective.value = 'NEARBY_COURSE'
@@ -122,10 +128,11 @@ onMounted(async () => {
         <aside v-if="planner?.dayBurden" class="day-burden" :data-level="planner.dayBurden.level"><strong>오늘 이동 부담 · {{ burdenLabel(planner.dayBurden.level) }}</strong><span v-if="dayBurdenSummary(planner.dayBurden)">{{ dayBurdenSummary(planner.dayBurden) }}</span><span v-else>현재 확인 가능한 이동 근거가 부족해요.</span><p v-if="planner.dayBurden.caution">{{ planner.dayBurden.caution }}</p></aside>
         <div v-if="plannerLoading && !planner" class="planner-loading-grid"><div class="map-skeleton" /><div class="timeline-skeleton" /></div>
         <StatusMessage v-else-if="plannerError && !planner" kind="error" title="오늘 일정을 불러오지 못했어요">장소 선택은 그대로 유지돼요. 잠시 후 일정 새로고침을 눌러주세요.</StatusMessage>
-        <div v-else class="planner-layout">
+        <div v-else-if="hasDayFocus" class="planner-layout">
           <KakaoDayMap :key="dayNumber" :items="plannerItems" :active-id="activePlannerItemId" @select="activatePlannerItem($event, true)" />
           <div class="timeline-panel"><p v-if="!plannerItems.length" class="empty-inline">아직 선택한 장소가 없어요. 식당이나 관광지를 먼저 골라주세요.</p><ol v-else class="timeline"><li v-for="(item, index) in plannerItems" :id="`planner-${item.plannerItemId}`" :key="item.plannerItemId"><article class="surface planner-card" :class="{ active: item.plannerItemId === activePlannerItemId }" role="button" tabindex="0" @click="activatePlannerItem(item.plannerItemId)" @keydown.enter="activatePlannerItem(item.plannerItemId)" @keydown.space.prevent="activatePlannerItem(item.plannerItemId)"><span class="timeline-number">{{ item.displayIndex }}</span><KtoImage :src="item.imageUrl" :alt="imageAlt(item.title)" /><div><p class="card-kicker">{{ SLOT_LABELS[item.slotType] }}</p><h3>{{ item.title || '현재 정보를 확인할 수 없는 장소' }}</h3><p class="address">{{ item.address }}</p><p class="source-line">{{ item.sourceAttribution }}</p><p v-if="!item.mapPoint" class="map-missing-note">좌표가 없어 지도 마커만 생략했어요.</p></div></article><div v-if="planner?.legs[index]" class="planner-leg">{{ transitSummary(planner.legs[index]) }}</div></li></ol></div>
         </div>
+        <p v-else class="empty-inline">오늘의 중심 장소를 고르면 지도와 일정이 나타나요.</p>
       </section>
 
       <section class="surface decision-section" aria-labelledby="focus-decision"><p class="step-label">첫 번째 결정</p><h2 id="focus-decision">오늘 어디를 중심으로 여행할까요?</h2><p class="result-notice">DAY {{ dayNumber }} 식당과 일정을 고를 때 가장 먼저 참고할 장소예요.</p>
@@ -142,6 +149,7 @@ onMounted(async () => {
 
       <StatusMessage v-if="trips.error" kind="error" title="현재 요청을 마치지 못했어요">{{ trips.error }}</StatusMessage>
       <section v-if="mealResult" class="decision-results" aria-labelledby="meal-result"><p class="eyebrow">현재 TourAPI Live</p><h2 id="meal-result">식당 추천</h2><p class="result-notice">{{ mealResult.nutritionNotice }}</p><p v-if="!candidates.length" class="empty-inline">현재 조건으로 비교할 추천 후보가 없어요.</p>
+        <p class="result-notice">추천 식당 {{ candidates.length }}곳을 현재 조건에서 확인했어요.</p>
         <article v-for="candidate in candidates" :key="candidate.contentId" class="surface live-card"><KtoImage :src="candidate.imageUrl" :alt="imageAlt(candidate.title)" /><div class="live-card-body"><p class="card-kicker">{{ candidate.areaLabel || perspectiveLabel(candidate.perspective) }}</p><h3>{{ candidate.title }}</h3><p class="address">{{ candidate.address }}</p><dl class="facts"><div><dt>여행·식사 적합도</dt><dd>{{ candidate.overallScore ?? candidate.compatibilityScore }}점</dd></div><div><dt>정보 근거 커버리지</dt><dd>{{ candidate.evidenceCoverage ?? candidate.evaluatedWeight }}%</dd></div></dl><ul class="dimension-list"><li v-for="dimension in candidate.evaluatedDimensions" :key="dimension.code || dimension.dimension"><span>{{ dimension.label || dimension.dimension }}</span><strong>{{ dimension.evaluated === false || dimension.evidenceState === 'NOT_EVALUATED' ? '미평가' : `${dimension.awardedPoints ?? dimension.score} / ${dimension.maxPoints ?? dimension.weight}` }}</strong></li></ul><div class="reason-grid"><div><h4>우리 가족과 잘 맞는 점</h4><p>{{ candidate.ourFamilyFitReasons.join(' ') || '현재 확인된 근거를 살펴봐 주세요.' }}</p></div><div><h4>우리 가족이 주의할 점</h4><p>{{ candidate.ourFamilyCautions.join(' ') || '공개 정보에서 별도 근거를 확인하지 못했어요.' }}</p></div><div><h4>방문 전에 같이 확인하면 좋은 점</h4><p>{{ candidate.checkBeforeVisit.join(' ') }}</p></div></div><p v-if="candidate.nutritionEvidence.length" class="nutrition-line">{{ candidate.nutritionEvidence.map(item => `${item.menuName} · ${item.referenceLabel}`).join(' / ') }}</p><div class="contact-actions"><a v-if="candidate.phone" class="action-button button-secondary" :href="telephoneHref(candidate.phone)">전화로 확인하기</a><span v-else class="empty-inline">전화 정보가 공개되어 있지 않아요</span><a v-if="candidate.placeUrl" class="action-button button-secondary" :href="candidate.placeUrl" target="_blank" rel="noopener noreferrer">지도·후기 보기</a></div><p class="source-line">{{ mealResult.sourceAttribution }}</p><button class="action-button button-primary" type="button" :disabled="Boolean(trips.actionLoading)" @click="selectMeal(candidate.contentId)">{{ selectedSlot.anchor?.contentId === candidate.contentId ? '선택 완료' : '이 식당 선택' }}</button></div></article>
       </section>
 
@@ -156,8 +164,8 @@ onMounted(async () => {
 
       <section v-if="selectedSlot?.anchor && ['LUNCH', 'DINNER'].includes(selectedSlot.mealType)" class="surface next-decisions" aria-label="식후 디저트">
         <p class="step-label">선택형 식후 디저트</p>
-        <button class="action-button button-secondary" type="button" :disabled="Boolean(trips.actionLoading)" @click="recommendDessert">식후 디저트 후보 보기</button>
-        <p v-if="dessertResult" class="result-notice">{{ dessertResult.candidates.length }}곳의 후보를 확인했어요. 재료와 교차조리는 전화로 확인해 주세요.</p>
+        <button class="action-button button-secondary" type="button" :disabled="Boolean(trips.actionLoading)" @click="recommendDessert">{{ MEAL_LABELS[selectedSlot.mealType] }} 후 디저트 후보 보기</button>
+        <p v-if="dessertResult" class="result-notice">{{ MEAL_LABELS[selectedSlot.mealType] }} 후 디저트 후보 {{ dessertResult.candidates.length }}곳을 확인했어요. 재료와 교차조리는 전화로 확인해 주세요.</p>
         <button v-for="candidate in dessertResult?.candidates || []" :key="candidate.contentId" class="text-button" type="button" :disabled="Boolean(trips.actionLoading)" @click="selectDessert(candidate)">{{ candidate.title }} 선택</button>
       </section>
 

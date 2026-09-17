@@ -86,10 +86,10 @@ export const useTripsStore = defineStore('trips', {
         return result
       })
     },
-    async recommendDessert(guest, trip, dayNumber) {
-      return this.run(`dessert:${dayNumber}`, async () => {
-        const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/dessert-recommendations`, { method: 'POST' })
-        this.dessertResults[dayKey(trip, dayNumber)] = result
+    async recommendDessert(guest, trip, dayNumber, mealType) {
+      return this.run(`dessert:${dayNumber}:${mealType}`, async () => {
+        const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/dessert-recommendations?mealType=${encodeURIComponent(mealType)}`, { method: 'POST' })
+        this.dessertResults[`${dayKey(trip, dayNumber)}:${mealType}`] = result
         return result
       })
     },

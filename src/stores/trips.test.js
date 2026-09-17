@@ -43,9 +43,10 @@ it('surfaces a tourism outage and clears loading state', async () => {
 })
 
 it('keeps post-meal dessert recommendations in memory only', async () => {
-  fetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({ slotType: 'POST_MEAL_DESSERT', candidates: [{ contentId: '789' }] }) })
+  fetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({ slotType: 'POST_LUNCH_DESSERT', candidates: [{ contentId: '789' }] }) })
   const store = useTripsStore()
-  await store.recommendDessert('guest', 'trip', 1)
-  expect(store.dessertResults['trip:1'].candidates[0].contentId).toBe('789')
+  await store.recommendDessert('guest', 'trip', 1, 'LUNCH')
+  expect(fetch.mock.calls[0][0]).toContain('mealType=LUNCH')
+  expect(store.dessertResults['trip:1:LUNCH'].candidates[0].contentId).toBe('789')
   expect(localStorage.length).toBe(0)
 })
