@@ -1,19 +1,26 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppIcon from '../components/AppIcon.vue'
 import JourneyArtwork from '../components/JourneyArtwork.vue'
 import StatusMessage from '../components/StatusMessage.vue'
 import { useGuestStore } from '../stores/guest'
+import { useTripsStore } from '../stores/trips'
 
 const router = useRouter()
 const guest = useGuestStore()
+const trips = useTripsStore()
+const recentTrip = computed(() => trips.items[0] || null)
+const regionName = key => key === 'JEJU' ? '제주' : '경주'
 const startError = ref('')
 const start = async mode => {
   startError.value = ''
   try { await guest.ensureGuest() } catch (error) { startError.value = 'Guest 정보를 준비하지 못했어요. 여행 화면에서 다시 시도해 주세요.' }
   await router.push({ path: '/travel/new', query: { start: mode } })
 }
+onMounted(async () => {
+  try { await trips.list(await guest.ensureGuest()) } catch { /* 홈은 여행 시작 기능을 유지한다 */ }
+})
 </script>
 <template>
   <section class="home-hero">
@@ -30,6 +37,7 @@ const start = async mode => {
     </div>
     <div class="hero-visual"><JourneyArtwork /><p>한 끼를 중심으로, 함께 이어가는 여행</p></div>
   </section>
+  <section v-if="recentTrip" class="surface recent-trip" aria-labelledby="recent-trip-title"><p class="eyebrow">준비 중인 여행</p><h2 id="recent-trip-title">{{ regionName(recentTrip.regionKey) }} · {{ recentTrip.durationDays - 1 }}박 {{ recentTrip.durationDays }}일</h2><p>{{ recentTrip.startDate }} ~ {{ recentTrip.endDate }} · 식사 {{ recentTrip.selectedAnchorCount }}/{{ recentTrip.mealSlotCount }} 선택</p><div class="card-actions"><RouterLink class="action-button button-primary" :to="`/travel/${recentTrip.tripPublicId}`">이어서 준비하기</RouterLink><RouterLink class="action-button button-secondary" to="/trips">전체 여행 보기</RouterLink></div></section>
   <section class="journey-intro" aria-labelledby="journey-heading">
     <div class="section-heading"><p class="eyebrow">우리의 여행 방식</p><h2 id="journey-heading">일정을 채우기 전에,<br class="mobile-break" /> 한 끼부터.</h2></div>
     <div class="journey-principles">
