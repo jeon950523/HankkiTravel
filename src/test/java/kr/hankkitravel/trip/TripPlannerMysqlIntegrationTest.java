@@ -157,6 +157,10 @@ class TripPlannerMysqlIntegrationTest {
         assertThat(view.items()).extracting(TripPlannerView.Item::slotType).containsExactly("BREAKFAST","MORNING_ACTIVITY","LUNCH","AFTERNOON_ACTIVITY","DINNER","STAY");
         assertThat(view.items()).allSatisfy(i->{assertThat(i.dataAvailability()).isEqualTo("CURRENT_DATA");assertThat(i.title()).startsWith("LIVE-");});
         assertThat(view.legs()).hasSize(5).allSatisfy(l->{assertThat(l.dataAvailability()).isEqualTo("CURRENT_DATA");assertThat(l.explicitWalkingDistanceMeters()).isEqualTo(500);assertThat(l.unaccountedDistanceMeters()).isEqualTo(900);});
+        assertThat(view.routeSanity().state()).isEqualTo("EVALUATED");
+        assertThat(view.routeSanity().severity()).isEqualTo("CAUTION");
+        assertThat(view.routeSanity().evaluatedLegCount()).isEqualTo(5);
+        assertThat(view.routeSanity().totalTransitMinutes()).isEqualByComparingTo("127.5");
         verify(transit,times(5)).findRoutes(any(),any());
         assertThat(columns("trip_day_place_anchors")).containsExactlyInAnyOrder("id","public_id","trip_day_id","slot_type","provider","content_id","content_type","created_at","updated_at");
     }
@@ -168,6 +172,8 @@ class TripPlannerMysqlIntegrationTest {
         assertThat(view.items().stream().filter(i->i.contentId().equals("12001")).findFirst().orElseThrow().dataAvailability()).isEqualTo("CURRENT_DATA_UNAVAILABLE");
         assertThat(view.items()).extracting(TripPlannerView.Item::contentId).doesNotContain("99999");
         assertThat(view.legs()).allSatisfy(l->assertThat(l.dataAvailability()).isEqualTo("UNAVAILABLE"));
+        assertThat(view.routeSanity().state()).isEqualTo("NOT_EVALUATED");
+        assertThat(view.routeSanity().totalTransitMinutes()).isNull();
     }
     @Test void mysqlConstraintsFlywayAndTripCascadeHold(){
         long before=count("trip_day_place_anchors");

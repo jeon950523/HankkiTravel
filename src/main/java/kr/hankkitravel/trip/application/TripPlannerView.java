@@ -40,9 +40,9 @@ public final class TripPlannerView {
             long explicitWalkingDistanceMeters) { }
     public record CallSummary(int tourListCalls,int tourDetailCalls,int transitCalls,long elapsedMillis) { }
     public record Planner(String tripPublicId,int dayNumber,LocalDate travelDate,List<Item> items,List<Leg> legs,
-            CallSummary callSummary,DayBurden dayBurden) {
+            CallSummary callSummary,DayBurden dayBurden,RouteSanity routeSanity) {
         public Planner(String tripPublicId,int dayNumber,LocalDate travelDate,List<Item> items,List<Leg> legs,
-                CallSummary callSummary){this(tripPublicId,dayNumber,travelDate,items,legs,callSummary,null);}
+                CallSummary callSummary){this(tripPublicId,dayNumber,travelDate,items,legs,callSummary,null,null);}
     }
     public record DayBurden(String state,String level,int selectedPlaceCount,BigDecimal transitMinutes,
             long explicitWalkingDistanceMeters,int transferCount,String caution) { }
@@ -50,5 +50,14 @@ public final class TripPlannerView {
             String imageUrl,Coordinates coordinates,String sourceAttribution,String dataAvailability) { }
     public record Leg(String fromSlotType,String toSlotType,String mode,BigDecimal durationMinutes,int transferCount,
             long explicitWalkingDistanceMeters,long unaccountedDistanceMeters,Long straightDistanceMeters,
-            String dataAvailability,String kakaoMapLandingUrl) { }
+            String dataAvailability,String kakaoMapLandingUrl,String burdenSeverity,List<String> burdenReasons) {
+        public Leg { burdenReasons=burdenReasons==null?List.of():List.copyOf(burdenReasons); }
+    }
+    public record RouteSanity(String state,String severity,int evidenceCoverage,int evaluatedLegCount,int totalLegCount,
+            LongestLeg longestLeg,BigDecimal totalTransitMinutes,Long totalStraightDistanceMeters,int totalTransfers,
+            long totalExplicitWalkingDistanceMeters,List<String> reasons,List<String> suggestedActions) {
+        public RouteSanity { reasons=List.copyOf(reasons);suggestedActions=List.copyOf(suggestedActions); }
+    }
+    public record LongestLeg(int legIndex,String fromSlotType,String toSlotType,String mode,BigDecimal durationMinutes,
+            Long straightDistanceMeters,String severity) { }
 }

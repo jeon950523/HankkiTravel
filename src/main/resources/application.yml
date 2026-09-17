@@ -89,6 +89,18 @@ hankki:
     kakao-base-url: https://dapi.kakao.com
     connect-timeout: 3s
     request-timeout: 8s
+planner:
+  route-sanity:
+    public-transit:
+      warn-minutes: ${ROUTE_SANITY_TRANSIT_WARN_MINUTES:60}
+      critical-minutes: ${ROUTE_SANITY_TRANSIT_CRITICAL_MINUTES:120}
+      warn-transfers: ${ROUTE_SANITY_TRANSIT_WARN_TRANSFERS:2}
+    car:
+      warn-distance-km: ${ROUTE_SANITY_CAR_WARN_DISTANCE_KM:20}
+      critical-distance-km: ${ROUTE_SANITY_CAR_CRITICAL_DISTANCE_KM:40}
+    day:
+      warn-total-transit-minutes: ${ROUTE_SANITY_DAY_WARN_TRANSIT_MINUTES:120}
+      critical-total-transit-minutes: ${ROUTE_SANITY_DAY_CRITICAL_TRANSIT_MINUTES:240}
 logging:
   level:
     org.springframework.web: INFO
