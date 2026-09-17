@@ -117,7 +117,8 @@ public class TripPlannerService {
         Set<String> selected=new HashSet<>();refs.places().forEach(r->selected.add(r.getContentId()));
         selected.addAll(excluded);
         var listed=new ArrayList<TourismPlace>();int listCalls=0;
-        for(var region:regions(refs.context().regionKey())){var page=keyword==null?tourism.places(region,type,0,listSize):tourism.searchPlaces(region,type,keyword,0,listSize);listCalls++;listed.addAll(page.items());}
+        for(var region:regions(refs.context().regionKey())){try{var page=keyword==null?tourism.places(region,type,0,listSize):tourism.searchPlaces(region,type,keyword,0,listSize);listed.addAll(page.items());}
+            catch(IntegrationException ignored){}listCalls++;}
         var mealContext=mealAnchor(refs.meals());Coordinates meal=mealContext.coordinates();int details=0;var candidates=new ArrayList<TripPlannerView.Candidate>();
         for(var place:listed.stream().filter(p->type.code().equals(p.contentTypeId())).filter(p->inRegion(p,refs.context().regionKey()))
                 .filter(p->p.coordinates()!=null&&!selected.contains(p.contentId())).sorted(Comparator.comparing(TourismPlace::contentId,TripPlannerService::stableIdCompare)).toList()){
@@ -141,8 +142,9 @@ public class TripPlannerService {
         var listed=new LinkedHashMap<String,TourismPlace>();int listCalls=0;
         if(keyword==null&&center!=null){try{tourism.restaurantsNear(center,5000,0,listSize).items().forEach(value->listed.putIfAbsent(value.contentId(),value));}
             catch(IntegrationException ignored){}listCalls++;}
-        if(keyword!=null||listed.isEmpty())for(var region:regions(refs.context().regionKey())){var items=keyword==null?tourism.places(region,TourismContentType.RESTAURANT,0,listSize).items()
-                :tourism.searchPlaces(region,TourismContentType.RESTAURANT,keyword,0,listSize).items();items.forEach(value->listed.putIfAbsent(value.contentId(),value));listCalls++;}
+        if(keyword!=null||listed.isEmpty())for(var region:regions(refs.context().regionKey())){try{var items=keyword==null?tourism.places(region,TourismContentType.RESTAURANT,0,listSize).items()
+                :tourism.searchPlaces(region,TourismContentType.RESTAURANT,keyword,0,listSize).items();items.forEach(value->listed.putIfAbsent(value.contentId(),value));}
+            catch(IntegrationException ignored){}listCalls++;}
         Set<String> blocked=new HashSet<>(excluded);refs.meals().forEach(value->blocked.add(value.getContentId()));
         var candidates=new ArrayList<TripPlannerView.Candidate>();int details=0;
         for(var place:listed.values().stream().filter(value->TourismContentType.RESTAURANT.code().equals(value.contentTypeId()))
@@ -171,11 +173,14 @@ public class TripPlannerService {
         var anchor=lastRouteAnchor(refs);Coordinates center=anchor.coordinates();
         var nextFocus=anchorBySlot(schedules.references(guest,trip,day+1),"DAY_FOCUS");
         var unique=new LinkedHashMap<String,TourismPlace>();int listCalls=0;int radiusUsed=0;
-        if(keyword!=null){for(var region:regions(refs.context().regionKey())){var page=tourism.searchPlaces(region,TourismContentType.LODGING,keyword,0,listSize);listCalls++;page.items().forEach(value->unique.putIfAbsent(value.contentId(),value));}}
+        if(keyword!=null){for(var region:regions(refs.context().regionKey())){try{var page=tourism.searchPlaces(region,TourismContentType.LODGING,keyword,0,listSize);page.items().forEach(value->unique.putIfAbsent(value.contentId(),value));}
+                catch(IntegrationException ignored){}listCalls++;}}
         else if(center!=null){for(int radius:stayRadiusLevels){try{var page=tourism.placesNear(center,TourismContentType.LODGING,radius,0,listSize);listCalls++;radiusUsed=radius;page.items().forEach(value->unique.putIfAbsent(value.contentId(),value));if(unique.size()>=stayMinimumCandidates)break;}
                 catch(IntegrationException ignored){listCalls++;break;}}
-            if(unique.size()<stayMinimumCandidates){radiusUsed=0;for(var region:regions(refs.context().regionKey())){var page=tourism.places(region,TourismContentType.LODGING,0,listSize);listCalls++;page.items().forEach(value->unique.putIfAbsent(value.contentId(),value));}}}
-        else for(var region:regions(refs.context().regionKey())){var page=tourism.places(region,TourismContentType.LODGING,0,listSize);listCalls++;page.items().forEach(value->unique.putIfAbsent(value.contentId(),value));}
+            if(unique.size()<stayMinimumCandidates){radiusUsed=0;for(var region:regions(refs.context().regionKey())){try{var page=tourism.places(region,TourismContentType.LODGING,0,listSize);page.items().forEach(value->unique.putIfAbsent(value.contentId(),value));}
+                    catch(IntegrationException ignored){}listCalls++;}}}
+        else for(var region:regions(refs.context().regionKey())){try{var page=tourism.places(region,TourismContentType.LODGING,0,listSize);page.items().forEach(value->unique.putIfAbsent(value.contentId(),value));}
+            catch(IntegrationException ignored){}listCalls++;}
         Set<String> blocked=new HashSet<>(excluded);refs.places().forEach(value->blocked.add(value.getContentId()));
         var hydrated=new ArrayList<StayCandidate>();int details=0;
         for(var place:unique.values()){

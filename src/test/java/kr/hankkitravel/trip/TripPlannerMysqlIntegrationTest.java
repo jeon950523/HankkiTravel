@@ -205,6 +205,15 @@ class TripPlannerMysqlIntegrationTest {
         assertThat(result.candidates()).extracting(TripPlannerView.Candidate::contentId).contains("39011","39012");
         assertThat(result.candidates()).allSatisfy(candidate->assertThat(candidate.informationEvidence()).isEqualTo("TOUR_API_LIVE"));
     }
+    @Test void directSearchKeepsSuccessfulRegionWhenAnotherLiveRegionFails(){
+        planner.select(guest,trip.tripPublicId(),1,TripPlannerView.SlotType.DAY_FOCUS,"12001");
+        doThrow(new IntegrationException("TOUR_API",IntegrationFailure.UPSTREAM_REJECTED)).when(source)
+                .searchPlacePage(eq(TourismRegion.SEOGWIPO),any(),anyString(),anyInt(),anyInt());
+        assertThat(planner.searchRestaurants(guest,trip.tripPublicId(),1,"비빔밥").candidates())
+                .extracting(TripPlannerView.Candidate::contentId).containsExactly("39011");
+        assertThat(planner.searchPlaces(guest,trip.tripPublicId(),1,TripPlannerView.SlotType.STAY,"호텔").candidates())
+                .extracting(TripPlannerView.Candidate::contentId).containsExactly("32001");
+    }
     HttpResponse<String> request(String method,String uri,String body)throws Exception{var b=HttpRequest.newBuilder(URI.create(uri)).header("Content-Type","application/json");return HttpClient.newHttpClient().send(b.method(method,body==null?HttpRequest.BodyPublishers.noBody():HttpRequest.BodyPublishers.ofString(body)).build(),HttpResponse.BodyHandlers.ofString());}
     TourismPlace place(String id,String type,TourismRegion region){return new TourismPlace(id,type,"LIST-"+id,"list address",null,null,null,new Coordinates(new BigDecimal("126.5"),new BigDecimal("33.5")),null,null,null,region.lDongRegnCd(),region.lDongSignguCd(),null,null,null,null,null,null);}
     TourismLivePlace live(String id){String type=id.startsWith("12")?"12":id.startsWith("32")?"32":"39";return new TourismLivePlace(id,type,"LIVE-"+id,"live address", "https://example.test/"+id+".jpg",new Coordinates(new BigDecimal("126.5").add(new BigDecimal(id.substring(id.length()-1)).movePointLeft(3)),new BigDecimal("33.5")),"50","110");}
