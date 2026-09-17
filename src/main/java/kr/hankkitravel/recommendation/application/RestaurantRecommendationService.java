@@ -182,11 +182,19 @@ public class RestaurantRecommendationService {
         var unique = new LinkedHashMap<String, kr.hankkitravel.tourism.model.TourismPlace>();
         int calls = 0;
         for (int radius : nearbyRadiiMeters) {
-            var page = tourism.restaurantsNear(anchor, radius, 0, listPageSize);
             calls++;
+            kr.hankkitravel.tourism.model.TourApiPage page;
+            try { page = tourism.restaurantsNear(anchor, radius, 0, listPageSize); }
+            catch (IntegrationException exception) { break; }
             page.items().stream().filter(place -> place.contentId() != null && !place.contentId().isBlank())
                     .forEach(place -> unique.putIfAbsent(place.contentId(), place));
             if (unique.size() >= nearbyMinimumCandidates) break;
+        }
+        if (unique.size() < nearbyMinimumCandidates) {
+            calls++;
+            tourism.restaurants(region, 0, listPageSize).items().stream()
+                    .filter(place -> place.contentId() != null && !place.contentId().isBlank())
+                    .forEach(place -> unique.putIfAbsent(place.contentId(), place));
         }
         return new RetrievedRestaurants(List.copyOf(unique.values()), calls);
     }

@@ -60,6 +60,7 @@ class TripPlannerMysqlIntegrationTest {
             assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
             TourismRegion region=inv.getArgument(0);TourismContentType type=inv.getArgument(1);List<TourismPlace> list;
             if(type==TourismContentType.ATTRACTION)list=List.of(place(region==TourismRegion.JEJU_CITY?"12001":"12002","12",region));
+            else if(type==TourismContentType.RESTAURANT)list=List.of(place(region==TourismRegion.JEJU_CITY?"39011":"39012","39",region));
             else list=region==TourismRegion.JEJU_CITY?List.of(place("32001","32",region)):List.of();
             return new TourApiPage(list,1,15,list.size());
         });
@@ -195,6 +196,14 @@ class TripPlannerMysqlIntegrationTest {
         var searched=planner.searchRestaurants(guest,trip.tripPublicId(),1,"비빔밥");
         assertThat(searched.candidates()).extracting(TripPlannerView.Candidate::contentId).containsExactly("39011");
         assertThat(searched.movementContext()).isEqualTo("DAY_FOCUS");
+    }
+    @Test void restaurantOtherFallsBackToLiveRegionalListWhenNearbyLookupFails(){
+        planner.select(guest,trip.tripPublicId(),1,TripPlannerView.SlotType.DAY_FOCUS,"12001");
+        when(source.fetchRestaurantNearby(any(),anyInt(),anyInt(),anyInt()))
+                .thenThrow(new IntegrationException("TOUR_API",IntegrationFailure.UPSTREAM_REJECTED));
+        var result=planner.otherRestaurants(guest,trip.tripPublicId(),1,Set.of());
+        assertThat(result.candidates()).extracting(TripPlannerView.Candidate::contentId).contains("39011","39012");
+        assertThat(result.candidates()).allSatisfy(candidate->assertThat(candidate.informationEvidence()).isEqualTo("TOUR_API_LIVE"));
     }
     HttpResponse<String> request(String method,String uri,String body)throws Exception{var b=HttpRequest.newBuilder(URI.create(uri)).header("Content-Type","application/json");return HttpClient.newHttpClient().send(b.method(method,body==null?HttpRequest.BodyPublishers.noBody():HttpRequest.BodyPublishers.ofString(body)).build(),HttpResponse.BodyHandlers.ofString());}
     TourismPlace place(String id,String type,TourismRegion region){return new TourismPlace(id,type,"LIST-"+id,"list address",null,null,null,new Coordinates(new BigDecimal("126.5"),new BigDecimal("33.5")),null,null,null,region.lDongRegnCd(),region.lDongSignguCd(),null,null,null,null,null,null);}

@@ -84,8 +84,13 @@ public class TripPlannerService {
         if(mealLive.detail().contentId()==null||mealLive.detail().contentId().isBlank())throw TripProblem.invalid("POST_MEAL_DESSERT_MEAL_REQUIRED");
         Coordinates center=tourism.place(meal.getContentId()).coordinates();
         if(center==null)throw TripProblem.invalid("POST_MEAL_DESSERT_LOCATION_REQUIRED");
-        var page=tourism.restaurantsNear(center,2000,0,listSize);int details=1;var candidates=new ArrayList<TripPlannerView.Candidate>();
-        for(var place:page.items().stream().filter(value->TourismContentType.RESTAURANT.code().equals(value.contentTypeId()))
+        var listed=new LinkedHashMap<String,TourismPlace>();int listCalls=0;
+        try{tourism.restaurantsNear(center,2000,0,listSize).items().forEach(value->listed.putIfAbsent(value.contentId(),value));listCalls++;}
+        catch(IntegrationException ignored){listCalls++;}
+        if(listed.isEmpty())for(var region:regions(refs.context().regionKey())){try{tourism.places(region,TourismContentType.RESTAURANT,0,listSize).items()
+                .forEach(value->listed.putIfAbsent(value.contentId(),value));}catch(IntegrationException ignored){}listCalls++;}
+        int details=1;var candidates=new ArrayList<TripPlannerView.Candidate>();
+        for(var place:listed.values().stream().filter(value->TourismContentType.RESTAURANT.code().equals(value.contentTypeId()))
                 .filter(value->value.coordinates()!=null).sorted(Comparator.comparingDouble((TourismPlace value)->distanceKm(center,value.coordinates()))
                         .thenComparing(TourismPlace::contentId,TripPlannerService::stableIdCompare)).toList()){
             if(details>detailLimit)break;details++;
@@ -99,7 +104,7 @@ public class TripPlannerService {
         }
         String availability=candidates.isEmpty()?"CURRENT_DATA_PARTIALLY_UNAVAILABLE":"CURRENT_DATA";
         return new TripPlannerView.Recommendations(dessertSlot.name(),List.copyOf(candidates),
-                new TripPlannerView.CallSummary(1,details,0,elapsed(started)),availability,ATTRIBUTION);
+                new TripPlannerView.CallSummary(listCalls,details,0,elapsed(started)),availability,ATTRIBUTION);
     }
     private TripPlannerView.Recommendations recommend(String guest,String trip,int day,TripPlannerView.SlotType slot,TourismContentType type){
         return recommend(guest,trip,day,slot,type,null);
@@ -134,8 +139,9 @@ public class TripPlannerService {
         long started=System.nanoTime();var refs=schedules.references(guest,trip,day);var profile=profiles.owned(guest,refs.context().profileId());
         var focus=anchorBySlot(refs,"DAY_FOCUS");Coordinates center=focus.coordinates();
         var listed=new LinkedHashMap<String,TourismPlace>();int listCalls=0;
-        if(keyword==null&&center!=null){tourism.restaurantsNear(center,5000,0,listSize).items().forEach(value->listed.putIfAbsent(value.contentId(),value));listCalls++;}
-        else for(var region:regions(refs.context().regionKey())){var items=keyword==null?tourism.places(region,TourismContentType.RESTAURANT,0,listSize).items()
+        if(keyword==null&&center!=null){try{tourism.restaurantsNear(center,5000,0,listSize).items().forEach(value->listed.putIfAbsent(value.contentId(),value));}
+            catch(IntegrationException ignored){}listCalls++;}
+        if(keyword!=null||listed.isEmpty())for(var region:regions(refs.context().regionKey())){var items=keyword==null?tourism.places(region,TourismContentType.RESTAURANT,0,listSize).items()
                 :tourism.searchPlaces(region,TourismContentType.RESTAURANT,keyword,0,listSize).items();items.forEach(value->listed.putIfAbsent(value.contentId(),value));listCalls++;}
         Set<String> blocked=new HashSet<>(excluded);refs.meals().forEach(value->blocked.add(value.getContentId()));
         var candidates=new ArrayList<TripPlannerView.Candidate>();int details=0;
@@ -166,7 +172,9 @@ public class TripPlannerService {
         var nextFocus=anchorBySlot(schedules.references(guest,trip,day+1),"DAY_FOCUS");
         var unique=new LinkedHashMap<String,TourismPlace>();int listCalls=0;int radiusUsed=0;
         if(keyword!=null){for(var region:regions(refs.context().regionKey())){var page=tourism.searchPlaces(region,TourismContentType.LODGING,keyword,0,listSize);listCalls++;page.items().forEach(value->unique.putIfAbsent(value.contentId(),value));}}
-        else if(center!=null){for(int radius:stayRadiusLevels){var page=tourism.placesNear(center,TourismContentType.LODGING,radius,0,listSize);listCalls++;radiusUsed=radius;page.items().forEach(value->unique.putIfAbsent(value.contentId(),value));if(unique.size()>=stayMinimumCandidates)break;}}
+        else if(center!=null){for(int radius:stayRadiusLevels){try{var page=tourism.placesNear(center,TourismContentType.LODGING,radius,0,listSize);listCalls++;radiusUsed=radius;page.items().forEach(value->unique.putIfAbsent(value.contentId(),value));if(unique.size()>=stayMinimumCandidates)break;}
+                catch(IntegrationException ignored){listCalls++;break;}}
+            if(unique.size()<stayMinimumCandidates){radiusUsed=0;for(var region:regions(refs.context().regionKey())){var page=tourism.places(region,TourismContentType.LODGING,0,listSize);listCalls++;page.items().forEach(value->unique.putIfAbsent(value.contentId(),value));}}}
         else for(var region:regions(refs.context().regionKey())){var page=tourism.places(region,TourismContentType.LODGING,0,listSize);listCalls++;page.items().forEach(value->unique.putIfAbsent(value.contentId(),value));}
         Set<String> blocked=new HashSet<>(excluded);refs.places().forEach(value->blocked.add(value.getContentId()));
         var hydrated=new ArrayList<StayCandidate>();int details=0;

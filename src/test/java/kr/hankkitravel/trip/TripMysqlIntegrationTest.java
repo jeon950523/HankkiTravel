@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import kr.hankkitravel.identity.application.GuestApplicationService;
 import kr.hankkitravel.profile.application.FamilyProfileApplicationService;
 import kr.hankkitravel.recommendation.application.RestaurantRecommendationService;
+import kr.hankkitravel.shared.geo.Coordinates;
 import kr.hankkitravel.shared.integration.*;
 import kr.hankkitravel.tourism.application.TourismRealtimeSource;
 import kr.hankkitravel.tourism.model.*;
@@ -147,6 +148,17 @@ class TripMysqlIntegrationTest {
         var g=schedules.create(guest,new TripPlan(profile,"GYEONGJU",start,start,List.of(new TripPlan.Day(1,List.of(TripPlan.MealType.LUNCH)))));
         decisions.recommend(guest,g.tripPublicId(),slot(g));
         verify(source).fetchRestaurantPage(eq(TourismRegion.GYEONGJU),eq(1),eq(16));
+    }
+    @Test void recommendationFallsBackToLiveRegionalListWhenNearbyLookupFails() {
+        profiles.update(guest,profile,profileCommand("CAR"));
+        when(source.fetchRestaurantNearby(any(),anyInt(),anyInt(),anyInt()))
+                .thenThrow(new IntegrationException("TOUR_API",IntegrationFailure.UPSTREAM_REJECTED));
+        var result=recommendations.recommend(new RestaurantRecommendationService.RecommendationCommand(guest,profile,
+                "JEJU",start,"LUNCH","PLACE_FIRST",new Coordinates(new java.math.BigDecimal("126.5"),
+                new java.math.BigDecimal("33.5")),null,List.of(),null));
+        assertThat(result.topCandidates()).hasSize(1);
+        verify(source).fetchRestaurantNearby(any(),eq(1000),eq(1),eq(16));
+        verify(source).fetchRestaurantPage(eq(TourismRegion.JEJU_CITY),eq(1),eq(16));
     }
     @Test void createRollbackIsAtomicWhenSlotInsertFails() {
         long trips=count("trips"),days=count("trip_days"),slots=count("trip_meal_slots");
