@@ -1,6 +1,7 @@
 package kr.hankkitravel.recommendation.api;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -92,7 +93,8 @@ public class RestaurantRecommendationController {
             int evaluatedWeight, int evidenceCoverage, String informationEvidence, String phone, String placeUrl,
             String contactEvidence, List<String> ourFamilyFitReasons,
             List<String> ourFamilyCautions, List<String> checkBeforeVisit, List<NutritionResponse> nutritionEvidence,
-            TransportResponse transportEvidence, List<DimensionResponse> evaluatedDimensions) {
+            Long distanceMeters, TransportResponse transportEvidence, String routeDataAvailability,
+            List<DimensionResponse> evaluatedDimensions) {
         static RestaurantResponse from(RecommendationCore.RankedCandidate item) {
             var candidate = item.candidate();
             var restaurant = candidate.candidate();
@@ -102,13 +104,19 @@ public class RestaurantRecommendationController {
                     item.evaluatedWeight(),item.evidenceCoverage(),candidate.informationEvidence().name(),restaurant.phone(),
                     restaurant.placeUrl(),restaurant.contactEvidence(),
                     candidate.positives(), candidate.cautions(), candidate.checks(), restaurant.menus().stream()
-                    .filter(MenuEvidenceView::displayable).map(MenuEvidenceView::from).toList(), transit == null ? null
+                    .filter(MenuEvidenceView::displayable).map(MenuEvidenceView::from).toList(),
+                    distanceMeters(restaurant.distanceFromAnchorKm()), transit == null ? null
                     : new TransportResponse(transit.totalTimeMinutes(), transit.transferCount(), transit.explicitWalkingDistanceMeters(),
-                            transit.unaccountedDistanceMeters() > 0, transit.landingUrl()), candidate.dimensions().entrySet().stream()
+                            transit.unaccountedDistanceMeters() > 0, transit.landingUrl()),
+                    transit == null ? "UNAVAILABLE" : "CURRENT_DATA", candidate.dimensions().entrySet().stream()
                     .map(entry -> new DimensionResponse(entry.getKey(),label(entry.getKey()),entry.getValue().weight(),
                             entry.getValue().evaluated(),entry.getValue().awardedPoints(),entry.getValue().maxPoints(),
                             entry.getValue().state().name(),entry.getValue().reasons(),entry.getValue().score()))
                     .toList());
+        }
+        private static Long distanceMeters(BigDecimal distanceFromAnchorKm) {
+            return distanceFromAnchorKm == null ? null
+                    : distanceFromAnchorKm.multiply(BigDecimal.valueOf(1000)).setScale(0, RoundingMode.HALF_UP).longValue();
         }
         private static String label(String code){return switch(code){case RecommendationCore.FAMILY_MEAL_FIT->"식사 조건";case RecommendationCore.TRIP_ROUTE_FIT->"여행 동선";case RecommendationCore.MOBILITY_FIT->"이동 편의";case RecommendationCore.AREA_DEMAND_SIGNAL->"지역 방문 수요";case RecommendationCore.REVIEW_SIGNAL->"후기/평판";default->"지역/메뉴";};}
     }
