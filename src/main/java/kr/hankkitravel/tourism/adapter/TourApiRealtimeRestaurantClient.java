@@ -48,6 +48,16 @@ public final class TourApiRealtimeRestaurantClient implements TourismRealtimeSou
     }
 
     @Override
+    public TourApiPage fetchPlaceNearby(Coordinates center, kr.hankkitravel.tourism.model.TourismContentType contentType,
+            int radiusMeters, int pageNo, int numOfRows) {
+        if (center == null || contentType == null || radiusMeters < 1 || radiusMeters > 20000 || pageNo < 1 || numOfRows < 1) {
+            throw new IllegalArgumentException("반경 장소 조회 조건을 확인하세요.");
+        }
+        return pageParser.parse(get("/locationBasedList2", Map.<String, Object>of("pageNo", pageNo, "numOfRows", numOfRows,
+                "contentTypeId", contentType.code(), "mapX", center.longitude(), "mapY", center.latitude(), "radius", radiusMeters)));
+    }
+
+    @Override
     public TourismRestaurantDetail fetchRestaurantDetail(String contentId) {
         validateContentId(contentId);
         var detail = detailClient.fetch(contentId);

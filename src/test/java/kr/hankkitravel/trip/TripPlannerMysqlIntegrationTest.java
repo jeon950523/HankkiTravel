@@ -63,8 +63,20 @@ class TripPlannerMysqlIntegrationTest {
             else list=region==TourismRegion.JEJU_CITY?List.of(place("32001","32",region)):List.of();
             return new TourApiPage(list,1,15,list.size());
         });
+        when(source.fetchPlaceNearby(any(),eq(TourismContentType.LODGING),anyInt(),anyInt(),anyInt())).thenAnswer(inv->{
+            int radius=inv.getArgument(2);
+            List<TourismPlace> list=radius<8000?List.of(place("32001","32",TourismRegion.JEJU_CITY))
+                    :List.of(place("32001","32",TourismRegion.JEJU_CITY),place("32002","32",TourismRegion.JEJU_CITY),place("32003","32",TourismRegion.JEJU_CITY));
+            return new TourApiPage(list,1,15,list.size());
+        });
+        when(source.fetchRestaurantNearby(any(),anyInt(),anyInt(),anyInt())).thenReturn(new TourApiPage(
+                List.of(place("39011","39",TourismRegion.JEJU_CITY),place("39012","39",TourismRegion.JEJU_CITY)),1,15,2));
+        when(source.fetchRestaurantDetail(anyString())).thenAnswer(inv->new TourismRestaurantDetail("비빔밥",null,null,null,null,
+                "LIVE-"+inv.getArgument(0),"live address",null,inv.getArgument(0),"39","50","110"));
         when(source.searchPlacePage(any(),any(),anyString(),anyInt(),anyInt())).thenAnswer(inv->{
-            TourismRegion region=inv.getArgument(0);var item=place(region==TourismRegion.JEJU_CITY?"12001":"12002","12",region);
+            TourismRegion region=inv.getArgument(0);TourismContentType type=inv.getArgument(1);
+            String id=type==TourismContentType.RESTAURANT?"39011":type==TourismContentType.LODGING?"32001":region==TourismRegion.JEJU_CITY?"12001":"12002";
+            var item=place(id,type.code(),region);
             return new TourApiPage(List.of(item),1,15,1);
         });
         when(source.fetchPlaceDetail(anyString())).thenAnswer(inv->{assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();return live(inv.getArgument(0));});
@@ -77,7 +89,9 @@ class TripPlannerMysqlIntegrationTest {
         var morning=planner.recommendActivities(guest,trip.tripPublicId(),1,TripPlannerView.SlotType.MORNING_ACTIVITY);
         assertThat(morning.candidates()).extracting(TripPlannerView.Candidate::contentId).containsExactly("12001","12002").doesNotContain("99999");
         assertThat(morning.candidates()).allSatisfy(c->{assertThat(c.informationEvidence()).isEqualTo("TOUR_API_LIVE");assertThat(c.sourceAttribution()).contains("한국관광공사");});
-        var stay=planner.recommendStay(guest,trip.tripPublicId(),1);assertThat(stay.candidates()).extracting(TripPlannerView.Candidate::contentId).containsExactly("32001");
+        var stay=planner.recommendStay(guest,trip.tripPublicId(),1);assertThat(stay.candidates()).extracting(TripPlannerView.Candidate::contentId).containsExactly("32003","32002","32001");
+        assertThat(stay.movementContext()).contains("DINNER","radius=8000","candidateCount=3");
+        assertThat(stay.candidates()).allSatisfy(candidate->assertThat(candidate.distanceMeters()).isNotNull());
         assertThat(count("tourism_places")).isEqualTo(beforePlaces);assertThat(count("restaurants")).isEqualTo(beforeRestaurants);
         jdbc.update("DELETE FROM restaurants WHERE tourism_place_id=?",stale);jdbc.update("DELETE FROM tourism_places WHERE id=?",stale);
     }
@@ -169,7 +183,18 @@ class TripPlannerMysqlIntegrationTest {
         var selected=request("PUT",base+"/place-anchors/MORNING_ACTIVITY","{\"contentId\":\"12001\",\"title\":\"untrusted\"}");
         assertThat(selected.statusCode()).isEqualTo(200);assertThat(selected.body()).doesNotContain("title","address","image");
         assertThat(request("GET",base+"/planner",null).statusCode()).isEqualTo(200);
+        assertThat(request("POST",base+"/place-alternatives","{\"slotType\":\"MORNING_ACTIVITY\",\"exclude\":\"12001\"}").statusCode()).isEqualTo(200);
+        assertThat(request("GET",base+"/place-search?slotType=MORNING_ACTIVITY&keyword=%EC%84%B1%EC%82%B0",null).statusCode()).isEqualTo(200);
         assertThat(request("DELETE",base+"/place-anchors/MORNING_ACTIVITY",null).statusCode()).isEqualTo(204);
+    }
+    @Test void restaurantOtherAndSearchUseLiveMealCandidatesAndRespectExclusions(){
+        planner.select(guest,trip.tripPublicId(),1,TripPlannerView.SlotType.DAY_FOCUS,"12001");
+        var other=planner.otherRestaurants(guest,trip.tripPublicId(),1,Set.of("39011"));
+        assertThat(other.candidates()).extracting(TripPlannerView.Candidate::contentId).containsExactly("39012");
+        assertThat(other.candidates().getFirst().distanceMeters()).isNotNull();
+        var searched=planner.searchRestaurants(guest,trip.tripPublicId(),1,"비빔밥");
+        assertThat(searched.candidates()).extracting(TripPlannerView.Candidate::contentId).containsExactly("39011");
+        assertThat(searched.movementContext()).isEqualTo("DAY_FOCUS");
     }
     HttpResponse<String> request(String method,String uri,String body)throws Exception{var b=HttpRequest.newBuilder(URI.create(uri)).header("Content-Type","application/json");return HttpClient.newHttpClient().send(b.method(method,body==null?HttpRequest.BodyPublishers.noBody():HttpRequest.BodyPublishers.ofString(body)).build(),HttpResponse.BodyHandlers.ofString());}
     TourismPlace place(String id,String type,TourismRegion region){return new TourismPlace(id,type,"LIST-"+id,"list address",null,null,null,new Coordinates(new BigDecimal("126.5"),new BigDecimal("33.5")),null,null,null,region.lDongRegnCd(),region.lDongSignguCd(),null,null,null,null,null,null);}

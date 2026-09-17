@@ -11,6 +11,7 @@ import kr.hankkitravel.tourism.model.TourismLivePlace;
 public interface TourismRealtimeSource {
     TourApiPage fetchRestaurantPage(TourismRegion region, int pageNo, int numOfRows);
     TourApiPage fetchRestaurantNearby(Coordinates center, int radiusMeters, int pageNo, int numOfRows);
+    TourApiPage fetchPlaceNearby(Coordinates center, TourismContentType contentType, int radiusMeters, int pageNo, int numOfRows);
     TourismRestaurantDetail fetchRestaurantDetail(String contentId);
     TourApiPage fetchPlacePage(TourismRegion region, TourismContentType contentType, int pageNo, int numOfRows);
     TourApiPage searchPlacePage(TourismRegion region, TourismContentType contentType, String keyword, int pageNo, int numOfRows);

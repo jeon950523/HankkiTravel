@@ -52,6 +52,14 @@ public class TourismRealtimeGateway {
         return source.fetchPlacePage(region,type,page+1,size);
     }
 
+    public TourApiPage placesNear(Coordinates center, TourismContentType type, int radiusMeters, int page, int size) {
+        if (center == null || type == null || radiusMeters < 1 || radiusMeters > 20000
+                || page < 0 || size < 1 || size > maxPageSize) {
+            throw new IllegalArgumentException("반경 장소 조회 범위를 확인하세요.");
+        }
+        return source.fetchPlaceNearby(center, type, radiusMeters, page + 1, size);
+    }
+
     public TourApiPage searchPlaces(TourismRegion region, TourismContentType type, String keyword, int page, int size) {
         if (region == null || type == null || keyword == null || keyword.isBlank() || keyword.trim().length() > 100
                 || page < 0 || size < 1 || size > maxPageSize) {

@@ -57,6 +57,10 @@ hankki:
   planner:
     list-size: ${PLANNER_LIST_SIZE:15}
     detail-limit: ${PLANNER_DETAIL_LIMIT:6}
+    stay:
+      radius-levels-meters: ${PLANNER_STAY_RADIUS_LEVELS_METERS:3000,8000,15000}
+      minimum-candidates: ${PLANNER_STAY_MINIMUM_CANDIDATES:3}
+      far-distance-meters: ${PLANNER_STAY_FAR_DISTANCE_METERS:20000}
     attraction:
       transit-call-limit: ${PLANNER_ATTRACTION_TRANSIT_CALL_LIMIT:6}
       nearby:

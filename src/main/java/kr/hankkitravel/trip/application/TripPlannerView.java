@@ -49,5 +49,6 @@ public final class TripPlannerView {
     public record Item(String slotType,String provider,String contentId,String contentType,String title,String address,
             String imageUrl,Coordinates coordinates,String sourceAttribution,String dataAvailability) { }
     public record Leg(String fromSlotType,String toSlotType,String mode,BigDecimal durationMinutes,int transferCount,
-            long explicitWalkingDistanceMeters,long unaccountedDistanceMeters,String dataAvailability) { }
+            long explicitWalkingDistanceMeters,long unaccountedDistanceMeters,Long straightDistanceMeters,
+            String dataAvailability,String kakaoMapLandingUrl) { }
 }
