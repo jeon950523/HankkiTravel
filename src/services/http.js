@@ -10,11 +10,17 @@ export class ApiError extends Error {
 }
 
 export async function requestJson(path, options = {}) {
-  const response = await fetch(apiUrl(path), {
-    cache: 'no-store',
-    ...options,
-    headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...options.headers },
-  })
+  let response
+  try {
+    response = await fetch(apiUrl(path), {
+      cache: 'no-store',
+      ...options,
+      headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...options.headers },
+    })
+  } catch (error) {
+    console.error('API network request failed', { path, error })
+    throw new ApiError('현재 요청을 마치지 못했어요. 잠시 후 다시 시도해 주세요.', 'NETWORK_UNAVAILABLE')
+  }
   const body = response.status === 204 ? null : await response.json().catch(() => null)
   if (!response.ok) {
     const message = response.status === 503

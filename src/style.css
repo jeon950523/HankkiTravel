@@ -290,6 +290,10 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 .trip-summary dd { min-width: 0; margin: 0; color: var(--color-olive); font-weight: 700; overflow-wrap: anywhere; }
 .wizard-actions { display: flex; justify-content: flex-end; gap: 10px; }
 .wizard-actions .action-button { min-width: 112px; }
+.movement-evidence { display: grid; gap: 4px; padding: 14px; border-radius: 12px; background: var(--color-soft); }
+.movement-evidence strong { color: var(--color-olive); font-size: 13px; }
+.movement-evidence p { color: var(--color-charcoal); font-weight: 650; }
+.movement-evidence span { color: var(--color-secondary); font-size: 12px; }
 .day-switcher { display: flex; gap: 8px; margin: 26px 0; overflow-x: auto; padding-bottom: 4px; }
 .day-switcher button, .slot-switcher button { min-height: 46px; padding: 9px 16px; border-radius: 999px; border: 1px solid var(--color-border-control); color: var(--color-olive); background: transparent; white-space: nowrap; font-weight: 700; }
 .day-switcher button.active, .slot-switcher button.active { color: white; background: var(--color-olive); border-color: var(--color-olive); }

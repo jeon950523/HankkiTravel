@@ -50,3 +50,21 @@ it('keeps post-meal dessert recommendations in memory only', async () => {
   expect(store.dessertResults['trip:1:LUNCH'].candidates[0].contentId).toBe('789')
   expect(localStorage.length).toBe(0)
 })
+
+it.each([
+  ['관광지', (store) => store.recommendPlace('guest', 'trip', 1, 'AFTERNOON_ACTIVITY'), 'trip:1:AFTERNOON_ACTIVITY'],
+  ['숙소', (store) => store.recommendStay('guest', 'trip', 1), 'trip:1:STAY'],
+])('%s 추천 실패를 해당 섹션에만 격리하고 기존 결과를 유지한다', async (label, request, key) => {
+  fetch.mockResolvedValue({ ok: false, status: 502, json: async () => null })
+  const store = useTripsStore()
+  const previous = { candidates: [{ contentId: 'saved' }] }
+  store.placeResults[key] = previous
+  store.planners['trip:1'] = { items: [{ contentId: 'saved' }] }
+
+  await expect(request(store)).rejects.toThrow()
+
+  expect(store.recommendationErrors[key]).toContain(`${label} 추천`)
+  expect(store.placeResults[key]).toStrictEqual(previous)
+  expect(store.planners['trip:1'].items[0].contentId).toBe('saved')
+  expect(store.error).toBeNull()
+})

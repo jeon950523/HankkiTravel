@@ -8,7 +8,7 @@ const slotKey = (trip, slot) => `${trip}:${slot}`
 export const useTripsStore = defineStore('trips', {
   state: () => ({
     items: [], detail: null, restaurantResults: {}, dessertResults: {}, placeResults: {}, focusResults: {}, selectedFocus: {}, planners: {},
-    plannerLoading: {}, plannerErrors: {}, loading: false, actionLoading: '', error: null,
+    plannerLoading: {}, plannerErrors: {}, recommendationErrors: {}, loading: false, actionLoading: '', error: null,
   }),
   actions: {
     async run(name, task) {
@@ -94,18 +94,30 @@ export const useTripsStore = defineStore('trips', {
     },
 
     async recommendPlace(guest, trip, dayNumber, slotType) {
-      return this.run(`place:${dayNumber}:${slotType}`, async () => {
+      const key = `${dayKey(trip, dayNumber)}:${slotType}`
+      delete this.recommendationErrors[key]
+      try { return await this.run(`place:${dayNumber}:${slotType}`, async () => {
         const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/place-recommendations`, { method: 'POST', body: JSON.stringify({ slotType }) })
-        this.placeResults[`${dayKey(trip, dayNumber)}:${slotType}`] = result
+        this.placeResults[key] = result
         return result
-      })
+      }) } catch (error) {
+        this.error = null
+        this.recommendationErrors[key] = '관광지 추천을 현재 불러오지 못했어요. 잠시 후 다시 확인해 주세요.'
+        throw error
+      }
     },
     async recommendStay(guest, trip, dayNumber) {
-      return this.run(`stay:${dayNumber}`, async () => {
+      const key = `${dayKey(trip, dayNumber)}:STAY`
+      delete this.recommendationErrors[key]
+      try { return await this.run(`stay:${dayNumber}`, async () => {
         const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/stay-recommendations`, { method: 'POST' })
-        this.placeResults[`${dayKey(trip, dayNumber)}:STAY`] = result
+        this.placeResults[key] = result
         return result
-      })
+      }) } catch (error) {
+        this.error = null
+        this.recommendationErrors[key] = '숙소 추천을 현재 불러오지 못했어요. 잠시 후 다시 확인해 주세요.'
+        throw error
+      }
     },
     async recommendDessert(guest, trip, dayNumber, mealType) {
       return this.run(`dessert:${dayNumber}:${mealType}`, async () => {

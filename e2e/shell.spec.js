@@ -4,7 +4,7 @@ const guestId = '9d4f2c3a-6d29-4c12-8a70-2c6a2f87b111'
 const tripId = 'c4b44ec1-ae62-4568-a7a9-25e4469d5d11'
 const slotId = '75a9d2bb-379f-42fc-bb36-047cbd34b853'
 const profile = { profileId: 42, name: '부모님과 제주', transportMode: 'CAR', parkingPreference: 'REQUIRED', walkingBurdenPreference: 'NORMAL', transferPreference: 'AVOID', stairsAvoidance: true, members: [{ memberId: 7, nickname: '엄마', continuousWalkingMinutes: 20, stairsPreference: 'AVOID', mealCautions: ['SODIUM'] }] }
-const candidate = { contentId: '123', title: '현재 식당', areaLabel: '제주시 현재로', address: '제주시 현재로', imageUrl: null, compatibilityScore: 82, overallScore: 82, evidenceCoverage: 70, informationEvidence: 'REFERENCE', phone: '064-123-4567', placeUrl: 'https://place.map.kakao.com/123', contactEvidence: 'KTO_DIRECT', ourFamilyFitReasons: ['공개 정보에서 확인한 근거예요.'], ourFamilyCautions: ['원재료는 직접 확인해 주세요.'], checkBeforeVisit: ['공개된 메뉴 정보가 부족해 식사 조건을 충분히 비교하기 어려워요. 방문 전에 전화로 재료와 조리법을 확인해 주세요.'], nutritionEvidence: [{ menuName: '비빔밥', matchLevel: 'HIGH', standardFood: '비빔밥', referenceLabel: '표준 음식 기준' }, { menuName: '돌솥밥', matchLevel: 'MEDIUM', standardFood: '비빔밥', referenceLabel: '유사 음식 기준' }], evaluatedDimensions: [{ code: 'FAMILY_MEAL_FIT', label: '식사 조건', weight: 40, evaluated: true, awardedPoints: 34, maxPoints: 40, evidenceState: 'EVALUATED' }, { code: 'AREA_DEMAND_SIGNAL', label: '지역 방문 수요', weight: 10, evaluated: true, awardedPoints: 8, maxPoints: 10, evidenceState: 'EVALUATED' }, { code: 'REVIEW_SIGNAL', label: '후기/평판', weight: 10, evaluated: false, awardedPoints: 0, maxPoints: 0, evidenceState: 'NOT_EVALUATED' }] }
+const candidate = { contentId: '123', title: '현재 식당', areaLabel: '제주시 현재로', address: '제주시 현재로', imageUrl: null, compatibilityScore: 82, overallScore: 82, evidenceCoverage: 70, informationEvidence: 'REFERENCE', distanceMeters: 1800, phone: '064-123-4567', placeUrl: 'https://place.map.kakao.com/123', contactEvidence: 'KTO_DIRECT', ourFamilyFitReasons: ['공개 정보에서 확인한 근거예요.'], ourFamilyCautions: ['원재료는 직접 확인해 주세요.'], checkBeforeVisit: ['공개된 메뉴 정보가 부족해 식사 조건을 충분히 비교하기 어려워요. 방문 전에 전화로 재료와 조리법을 확인해 주세요.'], nutritionEvidence: [{ menuName: '비빔밥', matchLevel: 'HIGH', standardFood: '비빔밥', referenceLabel: '표준 음식 기준' }, { menuName: '돌솥밥', matchLevel: 'MEDIUM', standardFood: '비빔밥', referenceLabel: '유사 음식 기준' }], evaluatedDimensions: [{ code: 'FAMILY_MEAL_FIT', label: '식사 조건', weight: 40, evaluated: true, awardedPoints: 34, maxPoints: 40, evidenceState: 'EVALUATED' }, { code: 'AREA_DEMAND_SIGNAL', label: '지역 방문 수요', weight: 10, evaluated: true, awardedPoints: 8, maxPoints: 10, evidenceState: 'EVALUATED' }, { code: 'REVIEW_SIGNAL', label: '후기/평판', weight: 10, evaluated: false, awardedPoints: 0, maxPoints: 0, evidenceState: 'NOT_EVALUATED' }] }
 const place = { contentId: '456', contentType: '12', title: '현재 관광지', areaLabel: '제주시', imageUrl: null, address: '제주시 여행로', coordinates: { longitude: 126.5, latitude: 33.5 }, informationEvidence: 'TOUR_API_LIVE', perspective: 'NEARBY_COURSE', overallScore: 88, evidenceCoverage: 100, routeBurden: { state: 'REFERENCE', level: 'LOW', score: 90 }, distanceMeters: 4200, transitSummary: null, familyMobilityEvidence: ['자동차는 직선거리 기준 참고값입니다.'], reasons: ['현재 일정에서 이동 부담이 적어요.'], cautions: ['실제 도로 이동시간이 아닙니다. 자동차 이동시간은 제공하지 않아요.'], fitReasons: ['현재 일정에서 이동 부담이 적어요.'], checkBeforeVisit: ['실제 도로 이동시간이 아닙니다.'], sourceAttribution: '출처: ⓒ한국관광공사' }
 const recommendation = { topCandidates: [candidate], perspectives: [{ perspective: 'BALANCED', status: 'READY', message: null, candidates: [candidate] }], candidateCount: 1, dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사', nutritionNotice: '표준 음식 기준 또는 유사 음식 기준 참고정보입니다.' }
 
@@ -101,7 +101,8 @@ for (const width of [360, 390, 768]) {
     await expect(page.getByText('지역 방문 수요')).toBeVisible()
     await expect(page.getByText('후기/평판')).toBeVisible()
     await expect(page.getByText('미평가')).toBeVisible()
-    await expect(page.getByRole('link', { name: '전화로 확인하기' })).toHaveAttribute('href', 'tel:0641234567')
+    await expect(page.getByText('중심 장소에서 직선거리 약 1.8km')).toBeVisible()
+    await expect(page.getByRole('link', { name: '전화하기' })).toHaveAttribute('href', 'tel:0641234567')
     await expect(page.getByRole('link', { name: '지도·후기 보기' })).toHaveAttribute('target', '_blank')
     await expect(page.locator('.nutrition-line')).toContainText('표준 음식 기준')
     await expect(page.locator('.nutrition-line')).toContainText('유사 음식 기준')
@@ -126,6 +127,7 @@ test('식당과 관광지를 선택하고 지도·카드 focus와 Kakao 이동�
   await page.getByRole('button', { name: '이 관광지 선택' }).click()
   await page.getByRole('button', { name: '오늘 일정 보기' }).click()
   await expect(page.getByRole('heading', { name: '지도와 오늘의 일정' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '지도와 오늘의 일정' })).toBeFocused()
   await expect(page.getByTestId('day-map')).toBeVisible()
   await expect(page.getByText(/대중교통 예상 24분/)).toBeVisible()
   await expect(page.locator('.planner-card h3')).toHaveText(['현재 관광지', '현재 식당'])
@@ -136,6 +138,47 @@ test('식당과 관광지를 선택하고 지도·카드 focus와 Kakao 이동�
   await expect(page.getByRole('button', { name: '1번 현재 관광지' })).toHaveClass(/active/)
   const keys = await page.evaluate(() => Object.keys(localStorage))
   expect(keys.filter(key => key !== 'hankki.guest-public-id')).toEqual([])
+})
+
+test('관광지 추천 502는 해당 영역에만 표시하고 기존 Planner를 유지한다', async ({ page }) => {
+  await mockGoldenApi(page)
+  await page.route('**/api/**/place-recommendations', route => route.fulfill({ status: 502, contentType: 'application/json', body: '{}' }))
+  await createDayTrip(page)
+  await selectDayFocus(page)
+  await page.getByRole('button', { name: '점심 TOP3 보기' }).click()
+  await page.getByRole('button', { name: '이 식당 선택' }).click()
+  await page.getByRole('button', { name: '관광지 추천 보기' }).click()
+
+  await expect(page.getByRole('heading', { name: '관광지 추천' })).toBeVisible()
+  await expect(page.getByText('관광지 추천을 현재 불러오지 못했어요.')).toBeVisible()
+  await expect(page.locator('.planner-card h3')).toHaveText(['현재 관광지', '현재 식당'])
+  await expect(page.getByRole('button', { name: '오늘 일정 보기' })).toBeVisible()
+  await expect(page.getByText('NetworkError when attempting to fetch resource.')).toHaveCount(0)
+})
+
+test('숙소 추천 502는 해당 영역에만 표시하고 저장된 선택을 유지한다', async ({ page }) => {
+  await mockGoldenApi(page)
+  await page.route('**/api/**', async route => {
+    const request = route.request(); const pathname = new URL(request.url()).pathname
+    const json = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
+    if (pathname === `/api/guests/${guestId}/trips/${tripId}` && request.method() === 'GET') {
+      return json({ tripPublicId: tripId, profileId: 42, regionKey: 'JEJU', startDate: '2026-09-16', endDate: '2026-09-17', durationDays: 2, days: [{ dayNumber: 1, travelDate: '2026-09-16', mealSlots: [{ mealSlotPublicId: slotId, mealType: 'LUNCH', anchor: { provider: 'KTO', contentId: '123', contentType: '39' } }] }, { dayNumber: 2, travelDate: '2026-09-17', mealSlots: [] }] })
+    }
+    if (pathname.endsWith('/days/1/planner') && request.method() === 'GET') {
+      return json({ tripPublicId: tripId, dayNumber: 1, travelDate: '2026-09-16', items: [{ slotType: 'DAY_FOCUS', provider: 'KTO', contentId: '456', contentType: '12', title: '현재 관광지', address: '제주시 여행로', imageUrl: null, coordinates: { longitude: 126.5, latitude: 33.5 }, sourceAttribution: '출처: ⓒ한국관광공사', dataAvailability: 'CURRENT_DATA' }, { slotType: 'LUNCH', provider: 'KTO', contentId: '123', contentType: '39', title: '현재 식당', address: '제주시 현재로', imageUrl: null, coordinates: { longitude: 126.53, latitude: 33.49 }, sourceAttribution: '출처: ⓒ한국관광공사', dataAvailability: 'CURRENT_DATA' }], legs: [] })
+    }
+    if (pathname.endsWith('/days/1/stay-recommendations') && request.method() === 'POST') return json({}, 502)
+    return route.fallback()
+  })
+
+  await page.goto(`/travel/${tripId}`)
+  await expect(page.locator('.planner-card h3')).toHaveText(['현재 관광지', '현재 식당'])
+  await page.getByRole('button', { name: '숙소 추천 보기' }).click()
+
+  await expect(page.getByRole('heading', { name: '숙소 추천' })).toBeVisible()
+  await expect(page.getByText('숙소 추천을 현재 불러오지 못했어요.')).toBeVisible()
+  await expect(page.locator('.planner-card h3')).toHaveText(['현재 관광지', '현재 식당'])
+  await expect(page.getByRole('button', { name: '오늘 일정 보기' })).toBeVisible()
 })
 
 test('GYEONGJU 1박2일은 선택 Day만 hydrate하고 marker를 완전히 교체한다', async ({ page }) => {
