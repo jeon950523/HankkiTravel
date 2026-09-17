@@ -37,13 +37,17 @@ class FoundationContextTest {
         assertThat(tourismSyncPageSize).isEqualTo(100);
     }
 
-    @Test void healthIsPublicAndOtherEndpointsAreDenied() throws Exception {
+    @Test void healthAndPrometheusArePublicAndOtherEndpointsAreDenied() throws Exception {
         var client = HttpClient.newHttpClient();
         var health = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/actuator/health"))
                 .header("Origin", "http://localhost:5175").build(), HttpResponse.BodyHandlers.ofString());
         assertThat(health.statusCode()).isEqualTo(200);
         assertThat(health.body()).contains("\"status\":\"UP\"").doesNotContain("password", "components");
         assertThat(health.headers().firstValue("Access-Control-Allow-Origin")).contains("http://localhost:5175");
+        var prometheus = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/actuator/prometheus"))
+                .build(), HttpResponse.BodyHandlers.ofString());
+        assertThat(prometheus.statusCode()).isEqualTo(200);
+        assertThat(prometheus.body()).isNotBlank().contains("# HELP", "# TYPE");
         var denied = client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/actuator/env"))
                 .build(), HttpResponse.BodyHandlers.ofString());
         assertThat(denied.statusCode()).isEqualTo(403);

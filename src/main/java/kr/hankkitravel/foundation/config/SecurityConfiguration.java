@@ -64,6 +64,7 @@ public class SecurityConfiguration {
                         .requestMatchers(GUEST_PROFILE_PATH).permitAll()
                         .requestMatchers(HttpMethod.POST, RECOMMENDATION_PATH).permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/actuator/prometheus").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/admin/tourism-sync/status")
                         .hasRole("TOURISM_SYNC_OPERATOR")
                         .requestMatchers(HttpMethod.POST, "/api/admin/tourism-sync/runs")
