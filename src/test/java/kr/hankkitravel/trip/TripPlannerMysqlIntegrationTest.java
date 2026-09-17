@@ -103,6 +103,14 @@ class TripPlannerMysqlIntegrationTest {
         assertThat(places.references(guest,trip.tripPublicId(),1).places()).extracting(value->value.getSlotType()+":"+value.getContentId())
                 .contains("POST_LUNCH_DESSERT:39011","POST_DINNER_DESSERT:39012");
     }
+    @Test void clearingLunchMealAtomicallyClearsItsDessert(){
+        places.select(guest,trip.tripPublicId(),1,TripPlannerView.SlotType.POST_LUNCH_DESSERT,
+                new TripPlaceScheduleService.ValidatedPlace("39011","39"));
+        String lunch=trip.days().getFirst().mealSlots().stream().filter(slot->"LUNCH".equals(slot.mealType())).findFirst().orElseThrow().mealSlotPublicId();
+        trips.clear(guest,trip.tripPublicId(),lunch);
+        assertThat(places.references(guest,trip.tripPublicId(),1).places()).extracting(value->value.getSlotType())
+                .doesNotContain("POST_LUNCH_DESSERT");
+    }
     @Test void dayFocusRecommendSearchSelectClearAndPlannerDeduplicateWork() throws Exception {
         assertThat(planner.recommendFocus(guest,trip.tripPublicId(),1).candidates()).isNotEmpty();
         assertThat(planner.searchFocus(guest,trip.tripPublicId(),1,"성산").candidates()).isNotEmpty();

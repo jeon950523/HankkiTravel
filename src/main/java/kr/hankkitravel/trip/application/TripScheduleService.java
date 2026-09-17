@@ -6,6 +6,7 @@ import java.util.UUID;
 import kr.hankkitravel.identity.application.GuestApplicationService;
 import kr.hankkitravel.profile.application.FamilyProfileApplicationService;
 import kr.hankkitravel.trip.model.*;
+import kr.hankkitravel.trip.persistence.TripPlannerMapper;
 import kr.hankkitravel.trip.persistence.TripScheduleMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,10 +15,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TripScheduleService {
     private final TripScheduleMapper mapper;
+    private final TripPlannerMapper plannerMapper;
     private final GuestApplicationService guests;
     private final FamilyProfileApplicationService profiles;
-    public TripScheduleService(TripScheduleMapper mapper, GuestApplicationService guests, FamilyProfileApplicationService profiles) {
-        this.mapper=mapper; this.guests=guests; this.profiles=profiles;
+    public TripScheduleService(TripScheduleMapper mapper, TripPlannerMapper plannerMapper, GuestApplicationService guests, FamilyProfileApplicationService profiles) {
+        this.mapper=mapper; this.plannerMapper=plannerMapper; this.guests=guests; this.profiles=profiles;
     }
     @Transactional
     public TripView create(String guest, TripPlan plan) {
@@ -62,7 +64,10 @@ public class TripScheduleService {
     }
     @Transactional
     public void clear(String guest,String trip,String slot) {
-        var owned=owned(guest,trip,true); mapper.deleteAnchor(slot(owned.getId(),slot).getId());
+        var owned=owned(guest,trip,true); var found=slot(owned.getId(),slot);
+        if ("LUNCH".equals(found.getMealType())) plannerMapper.clear(found.getTripDayId(),TripPlannerView.SlotType.POST_LUNCH_DESSERT.name());
+        if ("DINNER".equals(found.getMealType())) plannerMapper.clear(found.getTripDayId(),TripPlannerView.SlotType.POST_DINNER_DESSERT.name());
+        mapper.deleteAnchor(found.getId());
     }
     private TripRows.Schedule owned(String guest,String trip,boolean lock) {
         uuid(trip,"TRIP_NOT_FOUND"); long owner=guestId(guest);
