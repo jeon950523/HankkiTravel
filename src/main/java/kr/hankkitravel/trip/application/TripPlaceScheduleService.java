@@ -17,7 +17,7 @@ public class TripPlaceScheduleService {
     public DayReferences references(String guest,String trip,int day){var c=owned(guest,trip,day,false);return refs(c);}
     @Transactional
     public TripPlannerView.Reference select(String guest,String trip,int day,TripPlannerView.SlotType type,ValidatedPlace place){
-        var c=owned(guest,trip,day,true); requireStay(c,type);
+        var c=owned(guest,trip,day,true); requireStay(c,type); requireDessertMeal(c,type,place);
         var row=new TripPlannerRows.Reference(); row.setPublicId(UUID.randomUUID().toString());row.setTripDayId(c.getDayId());
         row.setSlotType(type.name());row.setContentId(place.contentId());row.setContentType(place.contentType());mapper.upsert(row);
         var saved=mapper.reference(c.getDayId(),type.name());
@@ -33,6 +33,15 @@ public class TripPlaceScheduleService {
         if(c==null)throw TripProblem.missing("TRIP_DAY_NOT_FOUND");return c;
     }
     private void requireStay(TripPlannerRows.Context c,TripPlannerView.SlotType type){if(type==TripPlannerView.SlotType.STAY&&!c.getTravelDate().isBefore(c.getEndDate()))throw TripProblem.invalid("STAY_NOT_REQUIRED");}
+    private void requireDessertMeal(TripPlannerRows.Context c,TripPlannerView.SlotType type,ValidatedPlace place){
+        if(type!=TripPlannerView.SlotType.POST_MEAL_DESSERT)return;
+        boolean selectedMeal=mapper.mealReferences(c.getDayId()).stream().anyMatch(value->
+                ("LUNCH".equals(value.getSlotType())||"DINNER".equals(value.getSlotType()))&&value.getContentId()!=null);
+        if(!selectedMeal)throw TripProblem.invalid("POST_MEAL_DESSERT_MEAL_REQUIRED");
+        boolean duplicate=mapper.mealReferences(c.getDayId()).stream().anyMatch(value->place.contentId().equals(value.getContentId()))
+                ||mapper.placeReferences(c.getDayId()).stream().anyMatch(value->place.contentId().equals(value.getContentId()));
+        if(duplicate)throw TripProblem.invalid("POST_MEAL_DESSERT_DUPLICATE");
+    }
     private DayContext convert(TripPlannerRows.Context c){return new DayContext(c.getTripId(),c.getDayId(),c.getTripPublicId(),c.getProfileId(),c.getRegionKey(),c.getStartDate(),c.getEndDate(),c.getDayNumber(),c.getTravelDate());}
     public record DayContext(long tripId,long dayId,String tripPublicId,long profileId,String regionKey,java.time.LocalDate startDate,
             java.time.LocalDate endDate,int dayNumber,java.time.LocalDate travelDate){public boolean lastDay(){return !travelDate.isBefore(endDate);}}

@@ -5,6 +5,7 @@ import java.util.Map;
 import kr.hankkitravel.shared.integration.ExternalHttpClient;
 import kr.hankkitravel.shared.integration.IntegrationException;
 import kr.hankkitravel.shared.integration.IntegrationFailure;
+import kr.hankkitravel.shared.geo.Coordinates;
 import kr.hankkitravel.tourism.application.TourismRealtimeSource;
 import kr.hankkitravel.tourism.model.TourApiPage;
 import kr.hankkitravel.tourism.model.TourismRegion;
@@ -35,6 +36,15 @@ public final class TourApiRealtimeRestaurantClient implements TourismRealtimeSou
         if (region == null || pageNo < 1 || numOfRows < 1) throw new IllegalArgumentException("지역과 페이지 범위를 확인하세요.");
         return pageParser.parse(get("/areaBasedList2", Map.<String, Object>of("pageNo", pageNo, "numOfRows", numOfRows,
                 "lDongRegnCd", region.lDongRegnCd(), "lDongSignguCd", region.lDongSignguCd())));
+    }
+
+    @Override
+    public TourApiPage fetchRestaurantNearby(Coordinates center, int radiusMeters, int pageNo, int numOfRows) {
+        if (center == null || radiusMeters < 1 || radiusMeters > 20000 || pageNo < 1 || numOfRows < 1) {
+            throw new IllegalArgumentException("반경 식당 조회 조건을 확인하세요.");
+        }
+        return pageParser.parse(get("/locationBasedList2", Map.<String, Object>of("pageNo", pageNo, "numOfRows", numOfRows,
+                "contentTypeId", "39", "mapX", center.longitude(), "mapY", center.latitude(), "radius", radiusMeters)));
     }
 
     @Override

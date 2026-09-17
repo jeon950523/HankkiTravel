@@ -44,6 +44,8 @@ public class RestaurantRecommendationService {
     private final int prefilterLimit;
     private final int detailLimit;
     private final int transitLimit;
+    private final List<Integer> nearbyRadiiMeters;
+    private final int nearbyMinimumCandidates;
 
     public RestaurantRecommendationService(FamilyProfileApplicationService profiles, TourismRealtimeGateway tourism,
             TransitRouteFinder transit, AreaDemandSignalProvider areaDemand, ContactEnrichmentProvider contacts,
@@ -51,7 +53,9 @@ public class RestaurantRecommendationService {
             @Value("${hankki.recommendation.list-page-size:16}") int listPageSize,
             @Value("${hankki.recommendation.prefilter-limit:10}") int prefilterLimit,
             @Value("${hankki.recommendation.detail-limit:6}") int detailLimit,
-            @Value("${hankki.recommendation.transit-limit:3}") int transitLimit) {
+            @Value("${hankki.recommendation.transit-limit:3}") int transitLimit,
+            @Value("${hankki.recommendation.nearby-radii-meters:1000,3000,5000}") String nearbyRadiiMeters,
+            @Value("${hankki.recommendation.nearby-minimum-candidates:3}") int nearbyMinimumCandidates) {
         this.profiles = profiles;
         this.tourism = tourism;
         this.transit = transit;
@@ -59,13 +63,16 @@ public class RestaurantRecommendationService {
         this.contacts = contacts;
         this.core = new RecommendationCore(scoring);
         if (listPageSize < 1 || prefilterLimit < 1 || detailLimit < 1 || transitLimit < 1
-                || prefilterLimit > listPageSize || detailLimit > prefilterLimit || transitLimit > detailLimit) {
+                || prefilterLimit > listPageSize || detailLimit > prefilterLimit || transitLimit > detailLimit
+                || nearbyMinimumCandidates < 1) {
             throw new IllegalArgumentException("추천 후보 호출 설정을 확인하세요.");
         }
         this.listPageSize = listPageSize;
         this.prefilterLimit = prefilterLimit;
         this.detailLimit = detailLimit;
         this.transitLimit = transitLimit;
+        this.nearbyRadiiMeters = parseRadii(nearbyRadiiMeters);
+        this.nearbyMinimumCandidates = nearbyMinimumCandidates;
     }
 
     public RecommendationResult recommend(RecommendationCommand command) {
@@ -73,16 +80,14 @@ public class RestaurantRecommendationService {
         long started = System.nanoTime();
         FamilyProfileSnapshot profile = profiles.owned(command.guestPublicId(), command.profileId());
         String region = canonicalRegion(command.region());
-        var page = tourism.restaurants(region, 0, listPageSize);
+        var retrieved = retrieveRestaurants(region, command.anchor());
         var context = new RequestContext(command.desiredLocalFood(), command.strictExclusions(), command.anchor() != null,
                 command.maximumTransitMinutes());
         var family = family(profile);
         var details = new ArrayList<CandidateWithCoordinates>();
         int detailCalls = 0;
         int kakaoLocalCalls = 0;
-        for (var place : page.items().stream().filter(place -> place.contentId() != null && !place.contentId().isBlank())
-                .sorted(Comparator.comparing(kr.hankkitravel.tourism.model.TourismPlace::contentId,
-                        RestaurantRecommendationService::stableIdCompare))
+        for (var place : retrieved.places().stream().filter(place -> place.contentId() != null && !place.contentId().isBlank())
                 .limit(prefilterLimit).toList()) {
             if (details.size() >= detailLimit) break;
             var live = tourism.decisionData(place.contentId());
@@ -166,10 +171,38 @@ public class RestaurantRecommendationService {
         }
         var topCandidates=core.rank(scored,Perspective.BALANCED);
         return new RecommendationResult(new ResultContext(region, command.tripDate(), command.mealType(), command.startMode()),
-                perspectives, topCandidates, scored.size(), new CallSummary(1, detailCalls, transitCalls,
+                perspectives, topCandidates, scored.size(), new CallSummary(retrieved.listCalls(), detailCalls, transitCalls,
                         demandStrengthCalls, resourceDemandCalls, kakaoLocalCalls,
                         Duration.ofNanos(System.nanoTime() - started).toMillis()),
-                transitUnavailable ? "TRANSIT_PARTIALLY_UNAVAILABLE" : "CURRENT_DATA", ATTRIBUTION, NUTRITION_NOTICE);
+                candidateAvailability(command.anchor(), scored.size(), transitUnavailable), ATTRIBUTION, NUTRITION_NOTICE);
+    }
+
+    private RetrievedRestaurants retrieveRestaurants(String region, Coordinates anchor) {
+        if (anchor == null) return new RetrievedRestaurants(tourism.restaurants(region, 0, listPageSize).items(), 1);
+        var unique = new LinkedHashMap<String, kr.hankkitravel.tourism.model.TourismPlace>();
+        int calls = 0;
+        for (int radius : nearbyRadiiMeters) {
+            var page = tourism.restaurantsNear(anchor, radius, 0, listPageSize);
+            calls++;
+            page.items().stream().filter(place -> place.contentId() != null && !place.contentId().isBlank())
+                    .forEach(place -> unique.putIfAbsent(place.contentId(), place));
+            if (unique.size() >= nearbyMinimumCandidates) break;
+        }
+        return new RetrievedRestaurants(List.copyOf(unique.values()), calls);
+    }
+
+    private String candidateAvailability(Coordinates anchor, int count, boolean transitUnavailable) {
+        if (transitUnavailable) return "TRANSIT_PARTIALLY_UNAVAILABLE";
+        if (count < nearbyMinimumCandidates) return anchor == null ? "PLACE_FIRST_CANDIDATE_SHORTAGE" : "RADIUS_CANDIDATE_SHORTAGE";
+        return "CURRENT_DATA";
+    }
+
+    private static List<Integer> parseRadii(String value) {
+        if (value == null || value.isBlank()) throw new IllegalArgumentException("반경 단계 설정을 확인하세요.");
+        var values = java.util.Arrays.stream(value.split(",")).map(String::trim).map(Integer::parseInt).toList();
+        if (values.isEmpty() || values.stream().anyMatch(radius -> radius < 100 || radius > 20000)
+                || !values.stream().sorted().toList().equals(values)) throw new IllegalArgumentException("반경 단계 설정을 확인하세요.");
+        return values;
     }
 
     private FamilyContext family(FamilyProfileSnapshot profile) {
@@ -267,4 +300,5 @@ public class RestaurantRecommendationService {
     }
     private record CandidateWithCoordinates(Candidate candidate, Coordinates coordinates,
             AreaDemandSignalProvider.RegionKey regionKey) { }
+    private record RetrievedRestaurants(List<kr.hankkitravel.tourism.model.TourismPlace> places, int listCalls) { }
 }

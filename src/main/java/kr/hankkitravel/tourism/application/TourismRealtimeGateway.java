@@ -1,5 +1,6 @@
 package kr.hankkitravel.tourism.application;
 
+import kr.hankkitravel.shared.geo.Coordinates;
 import java.util.List;
 import kr.hankkitravel.tourism.model.TourApiPage;
 import kr.hankkitravel.tourism.model.TourismNutritionEvidence;
@@ -29,6 +30,13 @@ public class TourismRealtimeGateway {
     public TourApiPage restaurants(String regionKey, int page, int size) {
         if (page < 0 || size < 1 || size > maxPageSize) throw new IllegalArgumentException("페이지/건수 범위를 확인하세요.");
         return source.fetchRestaurantPage(region(regionKey), page + 1, size);
+    }
+
+    public TourApiPage restaurantsNear(Coordinates center, int radiusMeters, int page, int size) {
+        if (center == null || radiusMeters < 1 || radiusMeters > 20000 || page < 0 || size < 1 || size > maxPageSize) {
+            throw new IllegalArgumentException("반경 식당 조회 범위를 확인하세요.");
+        }
+        return source.fetchRestaurantNearby(center, radiusMeters, page + 1, size);
     }
 
     public DecisionData decisionData(String contentId) {

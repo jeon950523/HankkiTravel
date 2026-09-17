@@ -48,6 +48,32 @@ public class TripPlannerService {
         var c=schedules.context(guest,trip,day); if(c.lastDay())throw TripProblem.invalid("STAY_NOT_REQUIRED");
         return recommend(guest,trip,day,TripPlannerView.SlotType.STAY,TourismContentType.LODGING,null);
     }
+    public TripPlannerView.Recommendations recommendDesserts(String guest,String trip,int day){
+        long started=System.nanoTime();var refs=schedules.references(guest,trip,day);
+        var profile=profiles.owned(guest,refs.context().profileId());
+        var meal=refs.meals().stream().filter(value->"DINNER".equals(value.getSlotType())||"LUNCH".equals(value.getSlotType()))
+                .max(Comparator.comparingInt(value->"DINNER".equals(value.getSlotType())?2:1)).orElseThrow(()->TripProblem.invalid("POST_MEAL_DESSERT_MEAL_REQUIRED"));
+        var mealLive=tourism.decisionData(meal.getContentId());
+        if(mealLive.detail().contentId()==null||mealLive.detail().contentId().isBlank())throw TripProblem.invalid("POST_MEAL_DESSERT_MEAL_REQUIRED");
+        Coordinates center=tourism.place(meal.getContentId()).coordinates();
+        if(center==null)throw TripProblem.invalid("POST_MEAL_DESSERT_LOCATION_REQUIRED");
+        var page=tourism.restaurantsNear(center,2000,0,listSize);int details=1;var candidates=new ArrayList<TripPlannerView.Candidate>();
+        for(var place:page.items().stream().filter(value->TourismContentType.RESTAURANT.code().equals(value.contentTypeId()))
+                .filter(value->value.coordinates()!=null).sorted(Comparator.comparingDouble((TourismPlace value)->distanceKm(center,value.coordinates()))
+                        .thenComparing(TourismPlace::contentId,TripPlannerService::stableIdCompare)).toList()){
+            if(details>detailLimit)break;details++;
+            try{var live=tourism.decisionData(place.contentId());
+                if(!"CAFE_DESSERT".equals(live.restaurant().classification())||!passesStrictFoodRestrictions(profile,live))continue;
+                String distance=distanceLabel(center,place.coordinates());
+                candidates.add(new TripPlannerView.Candidate(place.contentId(),live.detail().contentType(),live.detail().title(),areaLabel(live.detail().address()),
+                        live.detail().firstImage(),live.detail().address(),place.coordinates(),"TOUR_API_LIVE",List.of("선택한 식사 장소에서 직선거리 "+distance+"예요."),
+                        List.of("알레르기 재료·교차조리·실제 메뉴는 방문 전 전화로 확인해 주세요.","영업시간과 휴무일은 방문 전에 확인해 주세요."),ATTRIBUTION));
+            }catch(IntegrationException ignored) { }
+        }
+        String availability=candidates.isEmpty()?"CURRENT_DATA_PARTIALLY_UNAVAILABLE":"CURRENT_DATA";
+        return new TripPlannerView.Recommendations(TripPlannerView.SlotType.POST_MEAL_DESSERT.name(),List.copyOf(candidates),
+                new TripPlannerView.CallSummary(1,details,0,elapsed(started)),availability,ATTRIBUTION);
+    }
     private TripPlannerView.Recommendations recommend(String guest,String trip,int day,TripPlannerView.SlotType slot,TourismContentType type){
         return recommend(guest,trip,day,slot,type,null);
     }
@@ -76,6 +102,14 @@ public class TripPlannerService {
         var c=schedules.context(guest,trip,day);if(slot==null)throw TripProblem.invalid("PLACE_SLOT_TYPE_INVALID");
         if(slot==TripPlannerView.SlotType.STAY&&c.lastDay())throw TripProblem.invalid("STAY_NOT_REQUIRED");
         if(contentId==null||!contentId.matches("[0-9]{1,20}"))throw TripProblem.invalid("PLACE_ANCHOR_INVALID");
+        if(slot==TripPlannerView.SlotType.POST_MEAL_DESSERT){
+            var live=tourism.decisionData(contentId);
+            if(!contentId.equals(live.detail().contentId())||!TourismContentType.RESTAURANT.code().equals(live.detail().contentType())
+                    ||!inRegion(live.detail().regionCode(),live.detail().districtCode(),c.regionKey())||!"CAFE_DESSERT".equals(live.restaurant().classification())
+                    ||!passesStrictFoodRestrictions(profiles.owned(guest,c.profileId()),live))
+                throw TripProblem.invalid("POST_MEAL_DESSERT_INVALID");
+            return schedules.select(guest,trip,day,slot,new TripPlaceScheduleService.ValidatedPlace(contentId,live.detail().contentType()));
+        }
         var expected=slot.activity()?TourismContentType.ATTRACTION:TourismContentType.LODGING;var live=tourism.place(contentId);
         if(!contentId.equals(live.contentId())||!valid(live,expected,c.regionKey()))throw TripProblem.invalid("PLACE_ANCHOR_INVALID");
         return schedules.select(guest,trip,day,slot,new TripPlaceScheduleService.ValidatedPlace(contentId,live.contentType()));
@@ -122,12 +156,19 @@ public class TripPlannerService {
     private static boolean inRegion(TourismLivePlace p,String region){return regionMatches(p.regionCode(),p.districtCode(),region);}
     private static boolean inRegion(TourismPlace p,String region){return regionMatches(p.lDongRegnCd(),p.lDongSignguCd(),region);}
     private static boolean regionMatches(String r,String d,String region){if(r==null||r.isBlank())return false;return "JEJU".equals(region)?"50".equals(r):"47".equals(r)&&"130".equals(d);}
+    private static boolean inRegion(String r,String d,String region){return regionMatches(r,d,region);}
     private List<TourismRegion> regions(String region){return "JEJU".equals(region)?List.of(TourismRegion.JEJU_CITY,TourismRegion.SEOGWIPO):List.of(TourismRegion.GYEONGJU);}
-    private int order(String s){return switch(s){case"DAY_FOCUS"->0;case"BREAKFAST"->1;case"MORNING_ACTIVITY"->2;case"LUNCH"->3;case"AFTERNOON_ACTIVITY"->4;case"DINNER"->5;case"STAY"->6;default->99;};}
+    private int order(String s){return switch(s){case"DAY_FOCUS"->0;case"BREAKFAST"->1;case"MORNING_ACTIVITY"->2;case"LUNCH"->3;case"AFTERNOON_ACTIVITY"->4;case"DINNER"->5;case"POST_MEAL_DESSERT"->6;case"STAY"->7;default->99;};}
     private String areaLabel(String address){if(address==null||address.isBlank())return null;var parts=address.trim().split("\\s+");return String.join(" ",java.util.Arrays.copyOf(parts,Math.min(parts.length,3)));}
     private static int stableIdCompare(String a,String b){try{return new java.math.BigInteger(a).compareTo(new java.math.BigInteger(b));}catch(Exception e){return a.compareTo(b);}}
     private static double distanceKm(Coordinates a,Coordinates b){double lat1=Math.toRadians(a.latitude().doubleValue()),lat2=Math.toRadians(b.latitude().doubleValue());double dlat=lat2-lat1,dlon=Math.toRadians(b.longitude().doubleValue()-a.longitude().doubleValue());double h=Math.sin(dlat/2)*Math.sin(dlat/2)+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dlon/2)*Math.sin(dlon/2);return 6371*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));}
     private String distanceLabel(Coordinates a,Coordinates b){return String.format(Locale.ROOT,"%.1fkm",distanceKm(a,b));}
+    private boolean passesStrictFoodRestrictions(kr.hankkitravel.profile.application.FamilyProfileSnapshot profile,TourismRealtimeGateway.DecisionData live){
+        String target=(live.detail().title()+" "+live.detail().address()+" "+live.restaurant().menuCandidates().stream()
+                .map(TourismMenuCandidate::rawMenuName).reduce("",(left,right)->left+" "+right)).toLowerCase(Locale.ROOT);
+        return profile.members().stream().flatMap(member->java.util.stream.Stream.concat(member.allergenRestrictions().stream(),member.avoidedFoods().stream()))
+                .filter(value->value!=null&&!value.isBlank()).noneMatch(value->target.contains(value.toLowerCase(Locale.ROOT)));
+    }
     private long elapsed(long started){return Duration.ofNanos(System.nanoTime()-started).toMillis();}
     private record AnchorContext(Coordinates coordinates,int calls){}
 }

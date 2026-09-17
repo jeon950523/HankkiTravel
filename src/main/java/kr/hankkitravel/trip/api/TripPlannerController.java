@@ -24,6 +24,8 @@ public class TripPlannerController {
             @PathVariable int dayNumber,@RequestParam String keyword){return response(200,planner.searchFocus(guestPublicId,tripPublicId,dayNumber,keyword));}
     @PostMapping("/stay-recommendations")
     public ResponseEntity<TripPlannerView.Recommendations> stays(@PathVariable String guestPublicId,@PathVariable String tripPublicId,@PathVariable int dayNumber){return response(200,planner.recommendStay(guestPublicId,tripPublicId,dayNumber));}
+    @PostMapping("/dessert-recommendations")
+    public ResponseEntity<TripPlannerView.Recommendations> desserts(@PathVariable String guestPublicId,@PathVariable String tripPublicId,@PathVariable int dayNumber){return response(200,planner.recommendDesserts(guestPublicId,tripPublicId,dayNumber));}
     @PutMapping("/place-anchors/{slotType}")
     public ResponseEntity<TripPlannerView.Reference> select(@PathVariable String guestPublicId,@PathVariable String tripPublicId,@PathVariable int dayNumber,
             @PathVariable TripPlannerView.SlotType slotType,@RequestBody AnchorRequest request){return response(200,planner.select(guestPublicId,tripPublicId,dayNumber,slotType,request.contentId()));}
