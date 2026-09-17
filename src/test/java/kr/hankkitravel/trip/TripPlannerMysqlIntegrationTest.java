@@ -143,7 +143,7 @@ class TripPlannerMysqlIntegrationTest {
         planner.select(guest,trip.tripPublicId(),1,TripPlannerView.SlotType.MORNING_ACTIVITY,"12001");
         long day=jdbc.queryForObject("SELECT id FROM trip_days WHERE trip_id=(SELECT id FROM trips WHERE public_id=?) AND day_number=1",Long.class,trip.tripPublicId());
         assertThatThrownBy(()->jdbc.update("INSERT INTO trip_day_place_anchors(public_id,trip_day_id,slot_type,provider,content_id,content_type) VALUES(?,?, 'MORNING_ACTIVITY','KTO','12002','12')",UUID.randomUUID().toString(),day)).isInstanceOf(DataIntegrityViolationException.class);
-        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("13");assertThat(flyway.info().pending()).isEmpty();assertThat(flyway.migrate().migrationsExecuted).isZero();
+        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("14");assertThat(flyway.info().pending()).isEmpty();assertThat(flyway.migrate().migrationsExecuted).isZero();
         trips.delete(guest,trip.tripPublicId());assertThat(count("trip_day_place_anchors")).isEqualTo(before);
     }
     @Test void httpResponsesAreNoStoreAndExposeNoPayloadPersistenceFields() throws Exception{

@@ -19,7 +19,7 @@
 
 ## 검증
 
-- JDK 21 기준 백엔드 컴파일 및 비컨테이너 테스트 통과.
-- 전체 Maven 테스트는 Docker Desktop이 실행되지 않아 Testcontainers 6개가 환경 오류로 중단됐다. 코드 실패는 없었다.
+- Docker Desktop 및 JDK 21 기준 `./mvnw.cmd -B -ntp clean verify` 통과: 30개 테스트 묶음, 138개 테스트 PASS.
+- V14가 새 MySQL 컨테이너와 V10 업그레이드 경로 모두에서 검증됐다.
 - 프론트엔드 Vitest 44개 통과, production build 통과.
 - 인프라, 배포, DNS, AWS, Vercel 설정은 변경하지 않았다.
