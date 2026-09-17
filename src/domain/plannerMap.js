@@ -38,6 +38,23 @@ export function switchPlannerDay(state, dayNumber, items = []) {
   return { ...state, dayNumber, items: buildPlannerDisplayItems(items), activePlannerItemId: '' }
 }
 
+export function plannerLegId(leg, index) {
+  return `${leg.fromSlotType}->${leg.toSlotType}:${index}`
+}
+
+export function buildPlannerLegs(items = [], legs = []) {
+  return legs.map((leg, index) => ({
+    ...leg,
+    plannerLegId: plannerLegId(leg, index),
+    displayFrom: index + 1,
+    displayTo: index + 2,
+    fromPoint: items[index]?.mapPoint || null,
+    toPoint: items[index + 1]?.mapPoint || null,
+    renderReferenceLine: leg.mode === 'CAR' && leg.dataAvailability === 'STRAIGHT_LINE_REFERENCE'
+      && Boolean(items[index]?.mapPoint && items[index + 1]?.mapPoint),
+  }))
+}
+
 export const carRouteNotice = transportMode => transportMode === 'CAR'
   ? '자동차 이동시간은 현재 제공하지 않아요. 장소 위치와 공개 주차정보를 참고하고, 상세 경로는 지도에서 확인해 주세요.'
   : ''

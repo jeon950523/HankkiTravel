@@ -1,18 +1,27 @@
 <script setup>
-import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { loadKakaoMapSdk } from '../services/kakaoMapLoader'
 import { mapViewport } from '../domain/plannerMap'
 
-const props = defineProps({ items: { type: Array, default: () => [] }, activeId: { type: String, default: '' } })
-const emit = defineEmits(['select'])
+const props = defineProps({
+  items: { type: Array, default: () => [] },
+  legs: { type: Array, default: () => [] },
+  activeId: { type: String, default: '' },
+  activeLegId: { type: String, default: '' },
+})
+const emit = defineEmits(['select', 'select-leg'])
 const container = ref(null)
 const status = ref('idle')
+const activeLeg = computed(() => props.legs.find(leg => leg.plannerLegId === props.activeLegId))
 let map
 let overlays = []
+let lineOverlays = []
 
 function clearOverlays() {
   overlays.forEach(({ marker }) => marker.setMap(null))
+  lineOverlays.forEach(({ line, hitArea }) => { line.setMap(null); hitArea.setMap(null) })
   overlays = []
+  lineOverlays = []
 }
 
 function markerImage(maps, item, active = false) {
@@ -32,6 +41,10 @@ function styleActive() {
     marker.setZIndex(id === props.activeId ? 5 : 3)
     if (id === props.activeId && map) map.panTo(position)
   })
+  lineOverlays.forEach(({ id, line }) => line.setOptions({
+    strokeWeight: id === props.activeLegId ? 7 : 4,
+    strokeColor: id === props.activeLegId ? '#b85c39' : '#506b91',
+  }))
 }
 
 async function renderMap() {
@@ -56,6 +69,17 @@ async function renderMap() {
       overlays.push({ id: item.plannerItemId, marker, position, normalImage, activeImage })
       bounds?.extend(position)
     }
+    for (const leg of props.legs.filter(value => value.renderReferenceLine)) {
+      const path = [new maps.LatLng(leg.fromPoint.latitude, leg.fromPoint.longitude), new maps.LatLng(leg.toPoint.latitude, leg.toPoint.longitude)]
+      const line = new maps.Polyline({ path, strokeWeight: 4, strokeColor: '#506b91', strokeOpacity: .85, strokeStyle: 'shortdash' })
+      const hitArea = new maps.Polyline({ path, strokeWeight: 18, strokeColor: '#000000', strokeOpacity: .01 })
+      line.setMap(map); hitArea.setMap(map)
+      maps.event.addListener(line, 'click', () => emit('select-leg', leg.plannerLegId))
+      maps.event.addListener(hitArea, 'click', () => emit('select-leg', leg.plannerLegId))
+      maps.event.addListener(line, 'mouseover', () => emit('select-leg', leg.plannerLegId))
+      maps.event.addListener(hitArea, 'mouseover', () => emit('select-leg', leg.plannerLegId))
+      lineOverlays.push({ id: leg.plannerLegId, line, hitArea })
+    }
     if (bounds) map.setBounds(bounds, 40, 40, 40, 40)
     else map.setCenter(new maps.LatLng(viewport.center.latitude, viewport.center.longitude))
     status.value = 'ready'
@@ -66,8 +90,9 @@ async function renderMap() {
   }
 }
 
-watch(() => props.items, renderMap, { immediate: true, deep: true })
+watch(() => [props.items, props.legs], renderMap, { immediate: true, deep: true })
 watch(() => props.activeId, styleActive)
+watch(() => props.activeLegId, styleActive)
 onBeforeUnmount(clearOverlays)
 </script>
 
@@ -75,6 +100,11 @@ onBeforeUnmount(clearOverlays)
   <div class="day-map-shell">
     <div ref="container" class="day-map" data-testid="day-map" aria-label="현재 Day 일정 지도" />
     <div v-if="status === 'loading'" class="map-skeleton map-overlay" aria-label="지도를 불러오는 중" />
+    <div v-if="activeLeg" class="map-leg-popover" aria-live="polite">
+      <strong>{{ activeLeg.fromTitle }} → {{ activeLeg.toTitle }}</strong>
+      <span v-if="activeLeg.mode === 'CAR'">직선거리 참고선 · 실제 도로 경로와 시간은 제공하지 않아요.</span>
+      <span v-else>{{ activeLeg.transportModeLabel || '대중교통 이동 정보' }}</span>
+    </div>
     <div v-if="status === 'empty'" class="map-state" data-testid="map-empty"><strong>아직 지도에 표시할 장소가 충분하지 않아요.</strong><span>식당이나 관광지를 선택하면 여기에 일정이 보여요.</span></div>
     <div v-if="status === 'error'" class="map-state" data-testid="map-error"><strong>지도를 불러오지 못했어요.</strong><span>일정 카드는 계속 확인할 수 있어요.</span></div>
   </div>

@@ -7,7 +7,7 @@ const slotKey = (trip, slot) => `${trip}:${slot}`
 
 export const useTripsStore = defineStore('trips', {
   state: () => ({
-    items: [], detail: null, restaurantResults: {}, dessertResults: {}, placeResults: {}, focusResults: {}, selectedFocus: {}, planners: {},
+    items: [], detail: null, restaurantResults: {}, dessertResults: {}, placeResults: {}, alternativeResults: {}, focusResults: {}, selectedFocus: {}, planners: {},
     plannerLoading: {}, plannerErrors: {}, recommendationErrors: {}, loading: false, actionLoading: '', error: null,
   }),
   actions: {
@@ -48,6 +48,22 @@ export const useTripsStore = defineStore('trips', {
       return this.run(`meal:${slot}`, async () => {
         const result = await requestJson(`${pathFor(guest, trip)}/meal-slots/${encodeURIComponent(slot)}/recommendations`, { method: 'POST' })
         this.restaurantResults[slotKey(trip, slot)] = result
+        return result
+      })
+    },
+    async otherRestaurants(guest, trip, dayNumber, excluded = []) {
+      return this.run(`restaurant-other:${dayNumber}`, async () => {
+        const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/restaurant-alternatives`, {
+          method: 'POST', body: JSON.stringify({ exclude: excluded.join(',') }),
+        })
+        this.alternativeResults[`${dayKey(trip, dayNumber)}:RESTAURANT`] = result
+        return result
+      })
+    },
+    async searchRestaurants(guest, trip, dayNumber, keyword) {
+      return this.run(`restaurant-search:${dayNumber}`, async () => {
+        const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/restaurant-search?keyword=${encodeURIComponent(keyword)}`)
+        this.alternativeResults[`${dayKey(trip, dayNumber)}:RESTAURANT`] = result
         return result
       })
     },
@@ -118,6 +134,22 @@ export const useTripsStore = defineStore('trips', {
         this.recommendationErrors[key] = '숙소 추천을 현재 불러오지 못했어요. 잠시 후 다시 확인해 주세요.'
         throw error
       }
+    },
+    async otherPlaces(guest, trip, dayNumber, slotType, excluded = []) {
+      return this.run(`place-other:${dayNumber}:${slotType}`, async () => {
+        const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/place-alternatives`, {
+          method: 'POST', body: JSON.stringify({ slotType, exclude: excluded.join(',') }),
+        })
+        this.alternativeResults[`${dayKey(trip, dayNumber)}:${slotType}`] = result
+        return result
+      })
+    },
+    async searchPlaces(guest, trip, dayNumber, slotType, keyword) {
+      return this.run(`place-search:${dayNumber}:${slotType}`, async () => {
+        const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/place-search?slotType=${encodeURIComponent(slotType)}&keyword=${encodeURIComponent(keyword)}`)
+        this.alternativeResults[`${dayKey(trip, dayNumber)}:${slotType}`] = result
+        return result
+      })
     },
     async recommendDessert(guest, trip, dayNumber, mealType) {
       return this.run(`dessert:${dayNumber}:${mealType}`, async () => {

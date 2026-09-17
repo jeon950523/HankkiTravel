@@ -129,7 +129,7 @@ test('식당과 관광지를 선택하고 지도·카드 focus와 Kakao 이동�
   await expect(page.getByRole('heading', { name: '지도와 오늘의 일정' })).toBeVisible()
   await expect(page.getByRole('heading', { name: '지도와 오늘의 일정' })).toBeFocused()
   await expect(page.getByTestId('day-map')).toBeVisible()
-  await expect(page.getByText(/대중교통 예상 24분/)).toBeVisible()
+  await expect(page.getByText(/대중교통 약 24분/)).toBeVisible()
   await expect(page.locator('.planner-card h3')).toHaveText(['현재 관광지', '현재 식당'])
   await expect(page.locator('.planner-card').getByText('출처: ⓒ한국관광공사')).toHaveCount(2)
   await page.getByRole('button', { name: '2번 현재 식당' }).click()

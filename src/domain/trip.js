@@ -41,6 +41,12 @@ export function buildTripPayload(draft) {
 export const showStayForDay = (dayNumber, duration) => duration > 1 && dayNumber < duration
 export const activitySlotForMeal = mealType => mealType === 'BREAKFAST' ? 'MORNING_ACTIVITY' : 'AFTERNOON_ACTIVITY'
 export const dessertSlotForMeal = mealType => mealType === 'LUNCH' ? 'POST_LUNCH_DESSERT' : 'POST_DINNER_DESSERT'
-export const transitSummary = leg => leg?.dataAvailability === 'CURRENT_DATA'
-  ? `대중교통 예상 ${Math.round(leg.durationMinutes)}분 · 환승 ${leg.transferCount}회 · 명시 도보 ${leg.explicitWalkingDistanceMeters}m`
-  : '이동 정보는 현재 확인이 어려워요. 지도에서 한 번 더 확인해 주세요.'
+export const transitSummary = leg => {
+  if (leg?.mode === 'CAR' && leg?.dataAvailability === 'STRAIGHT_LINE_REFERENCE') {
+    const distance = leg.straightDistanceMeters < 1000 ? `${leg.straightDistanceMeters}m` : `${(leg.straightDistanceMeters / 1000).toFixed(1)}km`
+    return `직선거리 약 ${distance} · 실제 도로 경로와 소요시간은 카카오맵에서 확인해 주세요.`
+  }
+  return leg?.dataAvailability === 'CURRENT_DATA'
+    ? `대중교통 약 ${Math.round(leg.durationMinutes)}분 · 환승 ${leg.transferCount}회 · 명시 도보 ${leg.explicitWalkingDistanceMeters}m`
+    : '대중교통 경로를 현재 확인하지 못했어요. 카카오맵에서 다시 확인해 주세요.'
+}

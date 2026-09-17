@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { activatePlannerItem, buildPlannerDisplayItems, carRouteNotice, mapViewport, switchPlannerDay } from './plannerMap'
+import { activatePlannerItem, buildPlannerDisplayItems, buildPlannerLegs, carRouteNotice, mapViewport, switchPlannerDay } from './plannerMap'
 
 const item = (slotType, contentId, coordinates = { longitude: 126.5, latitude: 33.5 }, dataAvailability = 'CURRENT_DATA') => ({ slotType, contentId, coordinates, dataAvailability })
 
@@ -40,5 +40,16 @@ describe('planner map projection', () => {
     expect(carRouteNotice('CAR')).toContain('이동시간은 현재 제공하지 않아요')
     expect(carRouteNotice('CAR')).not.toMatch(/\d+분/)
     expect(carRouteNotice('PUBLIC_TRANSIT')).toBe('')
+  })
+
+  it('builds only honest car reference lines between adjacent markers', () => {
+    const items = buildPlannerDisplayItems([item('DAY_FOCUS', '1'), item('LUNCH', '2'), item('STAY', '3')])
+    const legs = buildPlannerLegs(items, [
+      { fromSlotType: 'DAY_FOCUS', toSlotType: 'LUNCH', mode: 'CAR', dataAvailability: 'STRAIGHT_LINE_REFERENCE' },
+      { fromSlotType: 'LUNCH', toSlotType: 'STAY', mode: 'PUBLIC_TRANSIT', dataAvailability: 'CURRENT_DATA' },
+    ])
+    expect(legs[0].renderReferenceLine).toBe(true)
+    expect(legs[1].renderReferenceLine).toBe(false)
+    expect(legs.map(value => value.plannerLegId)).toEqual(['DAY_FOCUS->LUNCH:0', 'LUNCH->STAY:1'])
   })
 })

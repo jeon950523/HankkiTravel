@@ -68,3 +68,19 @@ it.each([
   expect(store.planners['trip:1'].items[0].contentId).toBe('saved')
   expect(store.error).toBeNull()
 })
+
+it('keeps restaurant and place alternative searches transient and uses bounded submit requests', async () => {
+  fetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({ candidates: [{ contentId: '777' }] }) })
+  const store = useTripsStore()
+
+  await store.otherRestaurants('guest', 'trip', 1, ['111', '222'])
+  expect(fetch.mock.calls[0][0]).toContain('/restaurant-alternatives')
+  expect(JSON.parse(fetch.mock.calls[0][1].body).exclude).toBe('111,222')
+  expect(store.alternativeResults['trip:1:RESTAURANT'].candidates[0].contentId).toBe('777')
+
+  await store.searchPlaces('guest', 'trip', 1, 'STAY', '바다 숙소')
+  expect(fetch.mock.calls[1][0]).toContain('slotType=STAY')
+  expect(fetch.mock.calls[1][0]).toContain(encodeURIComponent('바다 숙소'))
+  expect(store.alternativeResults['trip:1:STAY'].candidates[0].contentId).toBe('777')
+  expect(localStorage.length).toBe(0)
+})
