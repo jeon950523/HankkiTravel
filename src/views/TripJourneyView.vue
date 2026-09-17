@@ -9,6 +9,7 @@ import { buildPlannerDisplayItems, buildPlannerLegs, carRouteNotice } from '../d
 import { resolveNextDecision } from '../domain/progressivePlanner'
 import { ATTRACTION_PERSPECTIVES, burdenLabel, dayBurdenSummary, movementEvidence, perspectiveCandidates } from '../domain/routeAwareAttraction'
 import { restaurantExternalActions, restaurantMovementEvidence } from '../domain/restaurantEvidence'
+import { problemLegId, reentryTarget, routeSanityActionLabel, routeSanityActions, routeSanityLabel, routeSanitySummary, slotHasRouteWarning } from '../domain/routeSanity'
 import { useGuestStore } from '../stores/guest'
 import { useProfilesStore } from '../stores/profiles'
 import { useTripsStore } from '../stores/trips'
@@ -31,6 +32,7 @@ const activePlannerLegId = ref('')
 const searchKeyword = ref('')
 const skippedDecisions = ref([])
 const expandedDecision = ref('')
+const keptSanityKey = ref('')
 const imageAlt = title => `${title} 관광정보 이미지`
 const tripId = computed(() => String(route.params.tripPublicId || ''))
 const day = computed(() => trips.detail?.days.find(item => item.dayNumber === dayNumber.value))
@@ -47,6 +49,8 @@ const activePerspective = computed(() => placeResult.value?.perspectives?.find(i
 const planner = computed(() => trips.planners[`${tripId.value}:${dayNumber.value}`])
 const plannerItems = computed(() => hasDayFocus.value ? buildPlannerDisplayItems(planner.value?.items || []) : [])
 const plannerLegs = computed(() => buildPlannerLegs(plannerItems.value, planner.value?.legs || []))
+const sanity = computed(() => planner.value?.routeSanity)
+const sanityActions = computed(() => keptSanityKey.value === `${dayKey.value}:${sanity.value?.severity}` ? [] : routeSanityActions(sanity.value))
 const activePlaceComplete = computed(() => plannerItems.value.some(item => item.slotType === activePlaceType.value))
 const plannerLoading = computed(() => Boolean(trips.plannerLoading[dayKey.value]))
 const plannerError = computed(() => trips.plannerErrors[dayKey.value])
@@ -76,6 +80,7 @@ const selectionKey = type => `${dayNumber.value}:${type}`
 const alternativeKey = computed(() => `${dayKey.value}:${activePlaceType.value || 'RESTAURANT'}`)
 const alternativeResult = computed(() => trips.alternativeResults[alternativeKey.value])
 const nextDecision = computed(() => resolveNextDecision({ day: day.value, plannerItems: plannerItems.value, stayRequired: canStay.value, skipped: skippedDecisions.value }))
+watch(planner, (value, previous) => { if (previous && value !== previous) keptSanityKey.value = '' })
 watch(day, async value => {
   selectedSlotId.value = value?.mealSlots[0]?.mealSlotPublicId || ''
   activePlaceType.value = ''
@@ -83,6 +88,7 @@ watch(day, async value => {
   activePlannerLegId.value = ''
   skippedDecisions.value = []
   expandedDecision.value = ''
+  keptSanityKey.value = ''
   if (guestId.value && value) await loadPlanner()
 })
 async function recommendFocus() { await trips.recommendFocus(guestId.value, tripId.value, dayNumber.value).catch(() => {}) }
@@ -184,6 +190,22 @@ async function activatePlannerLeg(id, scroll = false) {
   activePlannerLegId.value = id
   if (scroll) { await nextTick(); document.getElementById(`planner-leg-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }
 }
+async function focusProblemLeg() {
+  const id = problemLegId(sanity.value, plannerLegs.value)
+  if (id) await activatePlannerLeg(id, true)
+}
+async function handleSanityAction(action) {
+  const target = reentryTarget(action, sanity.value?.longestLeg)
+  if (target.type === 'KEEP') { keptSanityKey.value = `${dayKey.value}:${sanity.value?.severity}`; return }
+  if (target.type === 'RESTAURANT') {
+    const mealType = ['BREAKFAST', 'LUNCH', 'DINNER'].includes(target.slotType) ? target.slotType : target.slotType === 'POST_LUNCH_DESSERT' ? 'LUNCH' : target.slotType === 'POST_DINNER_DESSERT' ? 'DINNER' : day.value?.mealSlots[0]?.mealType
+    const slot = day.value?.mealSlots.find(item => item.mealType === mealType)
+    if (slot) { selectedSlotId.value = slot.mealSlotPublicId; expandedDecision.value = mealType; await recommendMeal() }
+    return
+  }
+  activeAttractionPerspective.value = 'NEARBY_COURSE'
+  await recommendPlace(target.slotType)
+}
 async function showPlanner() {
   if (!hasDayFocus.value) return
   if (!planner.value) await loadPlanner()
@@ -214,18 +236,19 @@ onMounted(async () => {
 
       <section id="day-planner" ref="plannerSection" class="planner-section trip-planner" aria-labelledby="planner-title"><div class="planner-heading"><div><p class="eyebrow">DAY {{ dayNumber }} · {{ formatDate(day?.travelDate) }}</p><h2 id="planner-title" ref="plannerHeading" tabindex="-1">지도와 오늘의 일정</h2></div><button class="text-button" type="button" :disabled="plannerLoading" @click="loadPlanner">일정 새로고침</button></div>
         <p v-if="carNotice" class="car-route-notice">{{ carNotice }}</p>
-        <aside v-if="planner?.dayBurden" class="day-burden" :data-level="planner.dayBurden.level"><strong>오늘 이동 부담 · {{ burdenLabel(planner.dayBurden.level) }}</strong><span v-if="dayBurdenSummary(planner.dayBurden)">{{ dayBurdenSummary(planner.dayBurden) }}</span><span v-else>현재 확인 가능한 이동 근거가 부족해요.</span><p v-if="planner.dayBurden.caution">{{ planner.dayBurden.caution }}</p></aside>
+        <aside v-if="sanity" class="route-sanity" :data-severity="sanity.severity"><div><strong>오늘 이동 부담 · {{ routeSanityLabel(sanity.severity) }}</strong><span>{{ routeSanitySummary(sanity) }}</span><small>이동 근거 {{ sanity.evaluatedLegCount }}/{{ sanity.totalLegCount }}구간 · {{ sanity.evidenceCoverage }}%</small></div><button v-if="problemLegId(sanity, plannerLegs)" class="text-button" type="button" @click="focusProblemLeg">문제 구간 보기</button><div v-if="sanityActions.length" class="route-sanity-actions"><button v-for="action in sanityActions" :key="action" class="text-button" type="button" @click="handleSanityAction(action)">{{ routeSanityActionLabel(action) }}</button></div><p v-else-if="keptSanityKey" class="route-sanity-kept">현재 선택을 유지했어요. 장소를 바꾸면 다시 확인합니다.</p></aside>
+        <aside v-else-if="planner?.dayBurden" class="day-burden" :data-level="planner.dayBurden.level"><strong>오늘 이동 부담 · {{ burdenLabel(planner.dayBurden.level) }}</strong><span v-if="dayBurdenSummary(planner.dayBurden)">{{ dayBurdenSummary(planner.dayBurden) }}</span><span v-else>현재 확인 가능한 이동 근거가 부족해요.</span><p v-if="planner.dayBurden.caution">{{ planner.dayBurden.caution }}</p></aside>
         <StatusMessage v-if="plannerError" kind="error" title="오늘 일정을 다시 불러오지 못했어요">현재 저장된 장소 선택은 그대로 유지돼요. 잠시 후 일정 새로고침을 눌러주세요.</StatusMessage>
         <div v-if="plannerLoading && !planner" class="planner-loading-grid"><div class="map-skeleton" /><div class="timeline-skeleton" /></div>
         <div v-else-if="hasDayFocus" class="planner-layout">
           <KakaoDayMap :key="dayNumber" :items="plannerItems" :legs="plannerLegs" :active-id="activePlannerItemId" :active-leg-id="activePlannerLegId" @select="activatePlannerItem($event, true)" @select-leg="activatePlannerLeg($event, true)" />
-          <div class="timeline-panel"><p v-if="!plannerItems.length" class="empty-inline">아직 선택한 장소가 없어요. 식당이나 관광지를 먼저 골라주세요.</p><ol v-else class="timeline"><li v-for="(item, index) in plannerItems" :id="`planner-${item.plannerItemId}`" :key="item.plannerItemId"><article class="surface planner-card" :class="{ active: item.plannerItemId === activePlannerItemId }" role="button" tabindex="0" @click="activatePlannerItem(item.plannerItemId)" @keydown.enter="activatePlannerItem(item.plannerItemId)" @keydown.space.prevent="activatePlannerItem(item.plannerItemId)"><span class="timeline-number">{{ item.displayIndex }}</span><KtoImage :src="item.imageUrl" :alt="imageAlt(item.title)" /><div><p class="card-kicker">{{ SLOT_LABELS[item.slotType] }}</p><h3>{{ item.title || '현재 정보를 확인할 수 없는 장소' }}</h3><p class="address">{{ item.address }}</p><p class="source-line">{{ item.sourceAttribution }}</p><p v-if="!item.mapPoint" class="map-missing-note">좌표가 없어 지도 마커만 생략했어요.</p></div></article><button v-if="plannerLegs[index]" :id="`planner-leg-${plannerLegs[index].plannerLegId}`" class="planner-leg" :class="{ active: plannerLegs[index].plannerLegId === activePlannerLegId }" type="button" @click="activatePlannerLeg(plannerLegs[index].plannerLegId)"><strong>{{ plannerLegs[index].displayFrom }} → {{ plannerLegs[index].displayTo }}</strong><span>{{ transitSummary(plannerLegs[index]) }}</span></button></li></ol></div>
+          <div class="timeline-panel"><p v-if="!plannerItems.length" class="empty-inline">아직 선택한 장소가 없어요. 식당이나 관광지를 먼저 골라주세요.</p><ol v-else class="timeline"><li v-for="(item, index) in plannerItems" :id="`planner-${item.plannerItemId}`" :key="item.plannerItemId"><article class="surface planner-card" :class="{ active: item.plannerItemId === activePlannerItemId }" role="button" tabindex="0" @click="activatePlannerItem(item.plannerItemId)" @keydown.enter="activatePlannerItem(item.plannerItemId)" @keydown.space.prevent="activatePlannerItem(item.plannerItemId)"><span class="timeline-number">{{ item.displayIndex }}</span><KtoImage :src="item.imageUrl" :alt="imageAlt(item.title)" /><div><p class="card-kicker">{{ SLOT_LABELS[item.slotType] }}</p><h3>{{ item.title || '현재 정보를 확인할 수 없는 장소' }}</h3><p class="address">{{ item.address }}</p><p class="source-line">{{ item.sourceAttribution }}</p><p v-if="!item.mapPoint" class="map-missing-note">좌표가 없어 지도 마커만 생략했어요.</p></div></article><button v-if="plannerLegs[index]" :id="`planner-leg-${plannerLegs[index].plannerLegId}`" class="planner-leg" :class="{ active: plannerLegs[index].plannerLegId === activePlannerLegId, warning: ['CAUTION', 'HIGH'].includes(plannerLegs[index].burdenSeverity) }" type="button" @click="activatePlannerLeg(plannerLegs[index].plannerLegId)"><strong>{{ plannerLegs[index].displayFrom }} → {{ plannerLegs[index].displayTo }}</strong><span>{{ transitSummary(plannerLegs[index]) }}</span><small v-if="plannerLegs[index].burdenReasons?.length">{{ plannerLegs[index].burdenReasons.join(' ') }}</small></button></li></ol></div>
         </div>
         <p v-else class="empty-inline">오늘의 중심 장소를 고르면 지도와 일정이 나타나요.</p>
       </section>
 
       <section id="decision-DAY_FOCUS" class="surface decision-section" aria-labelledby="focus-decision"><p class="step-label">첫 번째 결정</p><h2 id="focus-decision" tabindex="-1">오늘 어디를 중심으로 여행할까요?</h2><p class="result-notice">DAY {{ dayNumber }} 식당과 일정을 고를 때 가장 먼저 참고할 장소예요.</p>
-      <section v-if="plannerItems.length" class="compact-decisions" aria-label="완료한 선택"><p class="step-label">완료한 선택</p><div v-for="item in plannerItems" :key="`edit-${item.plannerItemId}`" class="compact-decision"><span aria-hidden="true">✓</span><strong>{{ SLOT_LABELS[item.slotType] }} · {{ item.title || '현재 선택' }}</strong><button class="text-button" type="button" :disabled="Boolean(trips.actionLoading)" @click="reselectPlanner(item.slotType)">변경</button><button class="text-button" type="button" :disabled="Boolean(trips.actionLoading)" @click="clearPlanner(item.slotType)">선택 해제</button></div></section>
+      <section v-if="plannerItems.length" class="compact-decisions" aria-label="완료한 선택"><p class="step-label">완료한 선택</p><div v-for="item in plannerItems" :key="`edit-${item.plannerItemId}`" class="compact-decision"><span aria-hidden="true">✓</span><strong>{{ SLOT_LABELS[item.slotType] }} · {{ item.title || '현재 선택' }} <small v-if="slotHasRouteWarning(item.slotType, plannerLegs)" class="route-warning-badge">이동 부담 큼</small></strong><button class="text-button" type="button" :disabled="Boolean(trips.actionLoading)" @click="reselectPlanner(item.slotType)">변경</button><button class="text-button" type="button" :disabled="Boolean(trips.actionLoading)" @click="clearPlanner(item.slotType)">선택 해제</button></div></section>
 
 
         <div v-if="selectedFocus" class="focus-selection"><strong>{{ selectedFocus.title }}</strong><span>{{ selectedFocus.areaLabel || selectedFocus.address }}</span><button type="button" class="text-button" @click="clearFocus">다시 고르기</button></div>

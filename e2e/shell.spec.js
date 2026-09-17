@@ -47,7 +47,9 @@ async function mockGoldenApi(page, { map = true } = {}) {
       const items = []
       if (focused) items.push({ slotType: 'DAY_FOCUS', provider: 'KTO', contentId: '456', contentType: '12', title: '현재 관광지', address: '제주시 여행로', imageUrl: null, coordinates: { longitude: 126.5, latitude: 33.5 }, sourceAttribution: '출처: ⓒ한국관광공사', dataAvailability: 'CURRENT_DATA' })
       if (anchored) items.push({ slotType: 'LUNCH', provider: 'KTO', contentId: '123', contentType: '39', title: '현재 식당', address: '제주시 현재로', imageUrl: null, coordinates: { longitude: 126.53, latitude: 33.49 }, sourceAttribution: '출처: ⓒ한국관광공사', dataAvailability: 'CURRENT_DATA' })
-      return json({ tripPublicId: tripId, dayNumber: 1, travelDate: '2026-09-16', items, legs: items.length > 1 ? [{ fromSlotType: 'DAY_FOCUS', toSlotType: 'LUNCH', mode: 'PUBLIC_TRANSIT', durationMinutes: 24, transferCount: 1, explicitWalkingDistanceMeters: 180, unaccountedDistanceMeters: 0, dataAvailability: 'CURRENT_DATA' }] : [] })
+      const legs = items.length > 1 ? [{ fromSlotType: 'DAY_FOCUS', toSlotType: 'LUNCH', mode: 'PUBLIC_TRANSIT', durationMinutes: 195, transferCount: 3, explicitWalkingDistanceMeters: 180, unaccountedDistanceMeters: 0, dataAvailability: 'CURRENT_DATA', burdenSeverity: 'HIGH', burdenReasons: ['대중교통 이동 시간이 매우 긴 구간이에요.'] }] : []
+      const routeSanity = legs.length ? { state: 'EVALUATED', severity: 'HIGH', evidenceCoverage: 100, evaluatedLegCount: 1, totalLegCount: 1, longestLeg: { legIndex: 0, fromSlotType: 'DAY_FOCUS', toSlotType: 'LUNCH', mode: 'PUBLIC_TRANSIT', durationMinutes: 195, straightDistanceMeters: null, severity: 'HIGH' }, totalTransitMinutes: 195, totalStraightDistanceMeters: null, totalTransfers: 3, totalExplicitWalkingDistanceMeters: 180, reasons: ['확인 가능한 이동 구간 중 긴 이동이 1개 있어요.'], suggestedActions: ['NEAR_RESTAURANT', 'KEEP_ITINERARY'] } : { state: 'NOT_EVALUATED', severity: 'NOT_EVALUATED', evidenceCoverage: 0, evaluatedLegCount: 0, totalLegCount: 0, longestLeg: null, reasons: [], suggestedActions: [] }
+      return json({ tripPublicId: tripId, dayNumber: 1, travelDate: '2026-09-16', items, legs, routeSanity })
     }
     return json({ message: 'not found' }, 404)
   })
@@ -100,7 +102,7 @@ for (const width of [360, 390, 768]) {
     await expect(page.locator('.decision-results .live-card').filter({ hasText: '현재 식당' }).getByText('출처: ⓒ한국관광공사')).toBeVisible()
     await expect(page.getByText('지역 방문 수요')).toBeVisible()
     await expect(page.getByText('후기/평판')).toBeVisible()
-    await expect(page.getByText('미평가')).toBeVisible()
+    await expect(page.getByText('미평가', { exact: true })).toBeVisible()
     await expect(page.getByText('중심 장소에서 직선거리 약 1.8km')).toBeVisible()
     await expect(page.getByRole('link', { name: '전화하기' })).toHaveAttribute('href', 'tel:0641234567')
     await expect(page.getByRole('link', { name: '지도·후기 보기' })).toHaveAttribute('target', '_blank')
@@ -129,7 +131,14 @@ test('식당과 관광지를 선택하고 지도·카드 focus와 Kakao 이동�
   await expect(page.getByRole('heading', { name: '지도와 오늘의 일정' })).toBeVisible()
   await expect(page.getByRole('heading', { name: '지도와 오늘의 일정' })).toBeFocused()
   await expect(page.getByTestId('day-map')).toBeVisible()
-  await expect(page.getByText(/대중교통 약 24분/)).toBeVisible()
+  await expect(page.getByText(/대중교통 약 195분/)).toBeVisible()
+  await expect(page.getByText('오늘 이동 부담 · 높음')).toBeVisible()
+  await page.getByRole('button', { name: '문제 구간 보기' }).click()
+  await expect(page.locator('.planner-leg')).toHaveClass(/active/)
+  await page.getByRole('button', { name: '가까운 식당 다시 보기' }).click()
+  await expect(page.getByText('현재 식당').last()).toBeVisible()
+  await page.getByRole('button', { name: '그래도 이 일정 유지' }).click()
+  await expect(page.getByText(/현재 선택을 유지했어요/)).toBeVisible()
   await expect(page.locator('.planner-card h3')).toHaveText(['현재 관광지', '현재 식당'])
   await expect(page.locator('.planner-card').getByText('출처: ⓒ한국관광공사')).toHaveCount(2)
   await page.getByRole('button', { name: '2번 현재 식당' }).click()

@@ -41,9 +41,9 @@ function styleActive() {
     marker.setZIndex(id === props.activeId ? 5 : 3)
     if (id === props.activeId && map) map.panTo(position)
   })
-  lineOverlays.forEach(({ id, line }) => line.setOptions({
+  lineOverlays.forEach(({ id, line, warning }) => line.setOptions({
     strokeWeight: id === props.activeLegId ? 7 : 4,
-    strokeColor: id === props.activeLegId ? '#b85c39' : '#506b91',
+    strokeColor: id === props.activeLegId || warning ? '#b85c39' : '#506b91',
   }))
 }
 
@@ -78,7 +78,7 @@ async function renderMap() {
       maps.event.addListener(hitArea, 'click', () => emit('select-leg', leg.plannerLegId))
       maps.event.addListener(line, 'mouseover', () => emit('select-leg', leg.plannerLegId))
       maps.event.addListener(hitArea, 'mouseover', () => emit('select-leg', leg.plannerLegId))
-      lineOverlays.push({ id: leg.plannerLegId, line, hitArea })
+      lineOverlays.push({ id: leg.plannerLegId, line, hitArea, warning: ['CAUTION', 'HIGH'].includes(leg.burdenSeverity) })
     }
     if (bounds) map.setBounds(bounds, 40, 40, 40, 40)
     else map.setCenter(new maps.LatLng(viewport.center.latitude, viewport.center.longitude))
@@ -104,6 +104,7 @@ onBeforeUnmount(clearOverlays)
       <strong>{{ activeLeg.fromTitle }} → {{ activeLeg.toTitle }}</strong>
       <span v-if="activeLeg.mode === 'CAR'">직선거리 참고선 · 실제 도로 경로와 시간은 제공하지 않아요.</span>
       <span v-else>{{ activeLeg.transportModeLabel || '대중교통 이동 정보' }}</span>
+      <small v-if="activeLeg.burdenReasons?.length">{{ activeLeg.burdenReasons.join(' ') }}</small>
     </div>
     <div v-if="status === 'empty'" class="map-state" data-testid="map-empty"><strong>아직 지도에 표시할 장소가 충분하지 않아요.</strong><span>식당이나 관광지를 선택하면 여기에 일정이 보여요.</span></div>
     <div v-if="status === 'error'" class="map-state" data-testid="map-error"><strong>지도를 불러오지 못했어요.</strong><span>일정 카드는 계속 확인할 수 있어요.</span></div>
