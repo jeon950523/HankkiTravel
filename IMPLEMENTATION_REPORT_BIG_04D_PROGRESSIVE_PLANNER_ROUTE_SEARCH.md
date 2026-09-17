@@ -2,13 +2,14 @@
 
 - 작업일: 2026-09-17
 - Backend 기능 커밋: `356c6ab97f30958095a48f879b1943875952370b`
+- Backend 운영 복구 커밋: `896e17ed70cc644c688310be58039e805de314a2`, `2a0046049d1fc32a19528e26b98cfbafbf36bf04`
 - Frontend 기능 커밋: `87f46c79ef1ceb0a4b56e04de5eda5b8c93de312`
 - Backend 기준 브랜치: `main`
 - Frontend 기준 브랜치: `main`
 
 ## 판정 기준
 
-이 보고서는 정적 소스 검수, 로컬 자동 테스트, GitHub Actions, 운영 공개 경로 확인을 구분한다. 운영 DB에 테스트 게스트와 여행을 새로 생성하는 실제 JEJU/GYEONGJU 전체 흐름은 수행하지 않았으므로 해당 항목을 자동 테스트 결과로 대체하지 않는다.
+이 보고서는 정적 소스 검수, 로컬 자동 테스트, GitHub Actions와 실제 운영 수용 검증을 구분한다. 운영 수용 검증에서는 전용 guest와 CAR/PUBLIC_TRANSIT profile을 생성해 JEJU/GYEONGJU 여행 흐름을 실행했다. 생성한 모든 trip은 DELETE API로 정리했으며, 삭제 API가 없는 테스트 guest 1개와 profile 2개만 운영 DB에 남아 있다.
 
 ## Progressive UX
 
@@ -48,6 +49,15 @@
 
 통합 테스트 fixture에서 DINNER를 당일 마지막 anchor로 사용했다. 반경 3000m 단계의 후보 1개에서 8000m 단계의 후보 3개로 확장됐으며, 최종 `movementContext`는 `DINNER;radius=8000;candidateCount=3`을 반환했다. fixture 좌표 기준 최종 TOP 후보 직선거리는 0m이고 나머지 후보에도 거리 값이 존재한다. 이는 알고리즘 검증값이며 실제 JEJU/GYEONGJU 운영 후보 거리 기록은 아래 Live 판정과 같이 별도 확인이 필요하다.
 
+운영 TourAPI Live 숙소 수용 결과는 다음과 같다.
+
+| 지역 | 기준 anchor | 사용 반경 | 후보 수 | 응답 순서 상위 거리 | 40~50km 후보의 첫 순위 노출 |
+| --- | --- | ---: | ---: | --- | --- |
+| JEJU | DINNER | 3,000m | 4 | 2,811m / 2,298m / 610m | 0 |
+| GYEONGJU | DINNER | 3,000m | 6 | 28m / 51m / 438m | 0 |
+
+JEJU는 다음 날 DAY_FOCUS까지 선택한 상태에서 현재 일정과 다음 날 동선을 함께 평가했다. 따라서 응답 순서는 현재 anchor 거리만의 오름차순이 아니라 두 동선의 적합도를 합산한 순서다.
+
 ## Route Visualization
 
 | 항목 | 결과 | 설명 |
@@ -69,12 +79,21 @@
 | 운영 Front 공개 경로 | PASS | `https://hankki.kro.kr/` HTTP 200 |
 | 운영 배포 번들 | PASS | BIG-04D의 `직선거리 참고선`, 다른 식당/숙소/관광지 UI가 운영 번들에 포함됨 |
 | 운영 API health | PASS | 배포 번들이 사용하는 `https://api.hankki.r-e.kr/actuator/health` HTTP 200 |
-| JEJU CAR 전체 흐름 | NOT VERIFIED | 운영 테스트 guest/trip 생성 없이 자동 fixture E2E만 PASS |
-| JEJU PUBLIC_TRANSIT 전체 흐름 | NOT VERIFIED | 운영 테스트 guest/trip 생성 없이 자동 fixture E2E만 PASS |
-| GYEONGJU 1N2D 전체 흐름 | NOT VERIFIED | 운영 테스트 guest/trip 생성 없이 자동 fixture E2E만 PASS |
-| JEJU/GYEONGJU 실제 숙소 TOP 거리 | NOT VERIFIED | 운영 데이터 생성이 필요한 수용 항목 |
+| JEJU CAR 전체 흐름 | PASS | 3 anchors, CAR leg 2개, 직선거리 43,015m / 2,138m, 생성 시간 0, 가짜 geometry 0 |
+| JEJU PUBLIC_TRANSIT 전체 흐름 | PASS | 3 anchors, CURRENT_DATA leg 2개, 실제 시간·환승·명시 도보 제공, 가짜 geometry 0 |
+| GYEONGJU 1N2D 전체 흐름 | PASS | Day 1/2 각각 3 anchors, 숙소·디저트·다른 후보·직접 검색 확인 |
+| JEJU/GYEONGJU 실제 숙소 TOP 거리 | PASS | JEJU 4개, GYEONGJU 6개 Live 후보의 거리와 반경 기록 |
 
 운영 API 정본은 `https://api.hankki.r-e.kr`이며, 프런트 운영 번들의 API base와 일치한다.
+
+### 운영 수용 상세
+
+- JEJU CAR: 식당 다른 후보 4개, 관광지 다른 후보 6개, Planner item 3개와 leg 2개를 확인했다. 자동차 소요시간은 생성하지 않았다.
+- JEJU PUBLIC_TRANSIT: 두 leg 모두 `CURRENT_DATA`였다. 확인된 시간은 약 195.18분/21.55분, 환승은 3회/0회, 명시 도보는 179m/0m였다.
+- GYEONGJU 1N2D: Day 1/2 모두 item 3개였고, 디저트 1개, 숙소 다른 후보 6개, 숙소 직접 검색 1개를 확인했다.
+- 직접 검색: 일반 검색어 기준 관광지 1개와 식당 6개가 `CURRENT_DATA`로 반환됐다. 선택된 상호명 그대로 검색해 결과가 없을 때는 HTTP 200의 빈 후보와 `CURRENT_DATA_PARTIALLY_UNAVAILABLE`로 안전하게 내려간다.
+- PUBLIC_TRANSIT upstream 응답에는 안정적인 geometry가 없었으므로 실제 polyline은 `NOT_AVAILABLE_HONESTLY`이며 임의 geometry는 만들지 않았다.
+- 모든 수용 테스트 trip은 삭제했다.
 
 ## Persistence
 
@@ -95,15 +114,21 @@
 ```text
 .\mvnw.cmd -B -ntp clean verify
 BUILD SUCCESS
-Tests run: 143, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 146, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 추가 집중 검증:
 
 ```text
 .\mvnw.cmd -B -ntp -Dtest=TripPlannerMysqlIntegrationTest test
-Tests run: 11, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 13, Failures: 0, Errors: 0, Skipped: 0
 ```
+
+운영 수용 중 확인된 TourAPI 부분 장애를 재현하는 회귀 테스트를 추가했다.
+
+- 위치 기반 식당 조회 실패 시 TourAPI Live 지역 목록 폴백
+- 제주 두 권역 중 한 권역 검색 실패 시 정상 권역 결과 유지
+- 식당·관광지·숙소 검색의 부분 장애 격리
 
 ### Frontend
 
@@ -127,7 +152,9 @@ total: 18 passed
 
 | 저장소 | 실행 | 결과 |
 | --- | --- | --- |
-| Backend | [Backend CI and GHCR #35221554424](https://github.com/jeon950523/hankki_travel_back/actions/runs/35221554424) | SUCCESS |
+| Backend 기능 | [Backend CI and GHCR #35222775682](https://github.com/jeon950523/hankki_travel_back/actions/runs/35222775682) | SUCCESS |
+| Backend Live 반경 폴백 | [Backend CI and GHCR #35225030666](https://github.com/jeon950523/hankki_travel_back/actions/runs/35225030666) | SUCCESS |
+| Backend 검색 부분 장애 격리 | [Backend CI and GHCR #35226761343](https://github.com/jeon950523/hankki_travel_back/actions/runs/35226761343) | SUCCESS |
 | Frontend | [Frontend CI #35221563499](https://github.com/jeon950523/hankki-travel/actions/runs/35221563499) | SUCCESS |
 
 Backend 실행에서 다음 작업이 모두 성공했다.
@@ -175,8 +202,8 @@ User GPS                                0
 Route Persistence                       0
 Candidate Persistence                   0
 
-JEJU Live                               NOT VERIFIED
-GYEONGJU Live                           NOT VERIFIED
+JEJU Live                               PASS
+GYEONGJU Live                           PASS
 Mobile 360/390/768                      PASS
 Infra Changes                           0
 ```
@@ -190,6 +217,8 @@ Infra Changes                           0
 - Vercel 설정: 변경 없음
 - DNS/TLS: 변경 없음
 
-## 남은 수용 검증
+## 운영 테스트 데이터 정리
 
-운영 DB에 일회성 테스트 guest/profile/trip을 생성할 수 있을 때 JEJU CAR, JEJU PUBLIC_TRANSIT, GYEONGJU 1박 2일을 실제 TourAPI 응답으로 수행한다. 검증 후 생성한 trip은 기존 DELETE API로 정리하고, 보고서에 실제 숙소 TOP 거리, 사용 radius, 후보 수를 추가한다.
+- 생성한 모든 수용 테스트 trip: 삭제 완료
+- 테스트 guest/profile: 삭제 API가 없어 guest 1개와 profile 2개가 남아 있음
+- 실제 사용자 데이터 변경: 없음
