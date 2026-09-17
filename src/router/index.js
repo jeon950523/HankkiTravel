@@ -1,3 +1,4 @@
+import TripsView from '../views/TripsView.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
@@ -16,6 +17,7 @@ export const routes = [
   { path: '/profiles/new', name: 'profile-new', component: ProfileEditorView, meta: { title: '새 가족 프로필' } },
   { path: '/profiles/:profileId/edit', name: 'profile-edit', component: ProfileEditorView, meta: { title: '가족 프로필 수정' } },
   { path: '/travel/new', name: 'travel-new', component: TravelStartView, meta: { title: '여행 시작' } },
+  { path: '/trips', name: 'trips', component: TripsView, meta: { title: '내 여행' } },
   { path: '/travel/:tripPublicId', name: 'trip-journey', component: TripJourneyView, meta: { title: '한 끼 여행' } },
   { path: '/travel/:tripPublicId/day/:dayNumber', redirect: to => `/travel/${to.params.tripPublicId}?day=${to.params.dayNumber}` },
   { path: '/auth/callback', name: 'auth-callback', component: AuthCallbackView, meta: { title: '로그인 연결 안내' } },

@@ -94,6 +94,26 @@ async function selectPlace(candidate) {
   const selected = await trips.selectPlace(guestId.value, tripId.value, dayNumber.value, type, candidate.contentId).catch(() => null)
   if (selected) { selectedPlaces.value[selectionKey(type)] = candidate; await loadPlanner() }
 }
+async function reselectPlanner(slotType) {
+  if (slotType === 'DAY_FOCUS') return recommendFocus()
+  if (['BREAKFAST', 'LUNCH', 'DINNER'].includes(slotType)) {
+    const slot = day.value?.mealSlots.find(item => item.mealType === slotType)
+    if (slot) { selectedSlotId.value = slot.mealSlotPublicId; return recommendMeal() }
+  }
+  if (slotType === 'POST_LUNCH_DESSERT' || slotType === 'POST_DINNER_DESSERT') {
+    const slot = day.value?.mealSlots.find(item => item.mealType === (slotType === 'POST_LUNCH_DESSERT' ? 'LUNCH' : 'DINNER'))
+    if (slot) { selectedSlotId.value = slot.mealSlotPublicId; return recommendDessert() }
+  }
+  return recommendPlace(slotType)
+}
+async function clearPlanner(slotType) {
+  if (slotType === 'DAY_FOCUS') await trips.clearFocus(guestId.value, tripId.value, dayNumber.value).catch(() => {})
+  else if (['BREAKFAST', 'LUNCH', 'DINNER'].includes(slotType)) {
+    const slot = day.value?.mealSlots.find(item => item.mealType === slotType)
+    if (slot) await trips.clearMeal(guestId.value, tripId.value, slot.mealSlotPublicId).catch(() => {})
+  } else await trips.clearPlace(guestId.value, tripId.value, dayNumber.value, slotType).catch(() => {})
+  await loadPlanner()
+}
 async function loadPlanner() { await trips.loadPlanner(guestId.value, tripId.value, dayNumber.value).catch(() => {}) }
 async function activatePlannerItem(id, scroll = false) {
   activePlannerItemId.value = id
@@ -136,6 +156,9 @@ onMounted(async () => {
       </section>
 
       <section class="surface decision-section" aria-labelledby="focus-decision"><p class="step-label">첫 번째 결정</p><h2 id="focus-decision">오늘 어디를 중심으로 여행할까요?</h2><p class="result-notice">DAY {{ dayNumber }} 식당과 일정을 고를 때 가장 먼저 참고할 장소예요.</p>
+      <section v-if="plannerItems.length" class="surface next-decisions" aria-label="현재 선택 편집"><p class="step-label">현재 선택 편집</p><div v-for="item in plannerItems" :key="`edit-${item.plannerItemId}`" class="card-actions"><strong>{{ SLOT_LABELS[item.slotType] }} · {{ item.title || '현재 선택' }}</strong><button class="text-button" type="button" :disabled="Boolean(trips.actionLoading)" @click="reselectPlanner(item.slotType)">다시 추천받기</button><button class="text-button" type="button" :disabled="Boolean(trips.actionLoading)" @click="clearPlanner(item.slotType)">{{ item.slotType === 'DAY_FOCUS' ? '중심 장소 해제' : '일정에서 빼기' }}</button></div></section>
+
+
         <div v-if="selectedFocus" class="focus-selection"><strong>{{ selectedFocus.title }}</strong><span>{{ selectedFocus.areaLabel || selectedFocus.address }}</span><button type="button" class="text-button" @click="clearFocus">다시 고르기</button></div>
         <template v-else><div class="focus-actions"><button class="action-button button-secondary" type="button" :disabled="Boolean(trips.actionLoading)" @click="recommendFocus">추천받기</button><form class="focus-search" @submit.prevent="searchFocus"><label class="wide-field">가고 싶은 곳 찾기<input v-model.trim="focusKeyword" maxlength="100" placeholder="예: 성산일출봉, 첨성대" /></label><button class="action-button button-primary" type="submit" :disabled="!focusKeyword.trim() || Boolean(trips.actionLoading)">찾기</button></form></div></template>
       </section>

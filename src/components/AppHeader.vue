@@ -4,6 +4,7 @@ import AppIcon from './AppIcon.vue'
 const route = useRoute()
 const navigation = [
   { to: '/', label: '홈', icon: 'home', active: path => path === '/' },
+  { to: '/trips', label: '내 여행', icon: 'journey', active: path => path === '/trips' },
   { to: '/travel/new', label: '여행 시작', icon: 'journey', active: path => path.startsWith('/travel') },
   { to: '/profiles', label: '가족 프로필', icon: 'family', active: path => path.startsWith('/profiles') },
 ]

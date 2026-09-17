@@ -7,7 +7,7 @@ const slotKey = (trip, slot) => `${trip}:${slot}`
 
 export const useTripsStore = defineStore('trips', {
   state: () => ({
-    detail: null, restaurantResults: {}, dessertResults: {}, placeResults: {}, focusResults: {}, selectedFocus: {}, planners: {},
+    items: [], detail: null, restaurantResults: {}, dessertResults: {}, placeResults: {}, focusResults: {}, selectedFocus: {}, planners: {},
     plannerLoading: {}, plannerErrors: {}, loading: false, actionLoading: '', error: null,
   }),
   actions: {
@@ -23,6 +23,19 @@ export const useTripsStore = defineStore('trips', {
       return this.run('create', async () => {
         this.detail = await requestJson(pathFor(guest), { method: 'POST', body: JSON.stringify(payload) })
         return this.detail
+      })
+    },
+    async list(guest) {
+      this.loading = true; this.error = null
+      try { this.items = await requestJson(pathFor(guest)); return this.items }
+      catch (error) { this.error = error.message || '여행 목록을 불러오지 못했어요.'; throw error }
+      finally { this.loading = false }
+    },
+    async deleteTrip(guest, trip) {
+      return this.run(`trip-delete:${trip}`, async () => {
+        await requestJson(pathFor(guest, trip), { method: 'DELETE' })
+        this.items = this.items.filter(item => item.tripPublicId !== trip)
+        if (this.detail?.tripPublicId === trip) this.detail = null
       })
     },
     async load(guest, trip) {
@@ -72,6 +85,14 @@ export const useTripsStore = defineStore('trips', {
         return anchor
       })
     },
+    async clearMeal(guest, trip, slot) {
+      return this.run(`meal-clear:${slot}`, async () => {
+        await requestJson(`${pathFor(guest, trip)}/meal-slots/${encodeURIComponent(slot)}/anchor`, { method: 'DELETE' })
+        const target = this.detail?.days.flatMap(day => day.mealSlots).find(item => item.mealSlotPublicId === slot)
+        if (target) target.anchor = null
+      })
+    },
+
     async recommendPlace(guest, trip, dayNumber, slotType) {
       return this.run(`place:${dayNumber}:${slotType}`, async () => {
         const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/place-recommendations`, { method: 'POST', body: JSON.stringify({ slotType }) })
@@ -100,6 +121,13 @@ export const useTripsStore = defineStore('trips', {
         return result
       })
     },
+    async clearPlace(guest, trip, dayNumber, slotType) {
+      return this.run(`place-clear:${dayNumber}:${slotType}`, async () => {
+        await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/place-anchors/${slotType}`, { method: 'DELETE' })
+        delete this.planners[dayKey(trip, dayNumber)]
+      })
+    },
+
     async loadPlanner(guest, trip, dayNumber) {
       const key = dayKey(trip, dayNumber)
       if (this.plannerLoading[key]) return null
