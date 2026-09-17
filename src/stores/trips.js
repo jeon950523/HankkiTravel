@@ -7,7 +7,7 @@ const slotKey = (trip, slot) => `${trip}:${slot}`
 
 export const useTripsStore = defineStore('trips', {
   state: () => ({
-    detail: null, restaurantResults: {}, placeResults: {}, focusResults: {}, selectedFocus: {}, planners: {},
+    detail: null, restaurantResults: {}, dessertResults: {}, placeResults: {}, focusResults: {}, selectedFocus: {}, planners: {},
     plannerLoading: {}, plannerErrors: {}, loading: false, actionLoading: '', error: null,
   }),
   actions: {
@@ -83,6 +83,13 @@ export const useTripsStore = defineStore('trips', {
       return this.run(`stay:${dayNumber}`, async () => {
         const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/stay-recommendations`, { method: 'POST' })
         this.placeResults[`${dayKey(trip, dayNumber)}:STAY`] = result
+        return result
+      })
+    },
+    async recommendDessert(guest, trip, dayNumber) {
+      return this.run(`dessert:${dayNumber}`, async () => {
+        const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/dessert-recommendations`, { method: 'POST' })
+        this.dessertResults[dayKey(trip, dayNumber)] = result
         return result
       })
     },

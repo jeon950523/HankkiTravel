@@ -41,3 +41,11 @@ it('surfaces a tourism outage and clears loading state', async () => {
   expect(store.actionLoading).toBe('')
   expect(store.error).toContain('현재 관광정보')
 })
+
+it('keeps post-meal dessert recommendations in memory only', async () => {
+  fetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({ slotType: 'POST_MEAL_DESSERT', candidates: [{ contentId: '789' }] }) })
+  const store = useTripsStore()
+  await store.recommendDessert('guest', 'trip', 1)
+  expect(store.dessertResults['trip:1'].candidates[0].contentId).toBe('789')
+  expect(localStorage.length).toBe(0)
+})
