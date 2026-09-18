@@ -39,11 +39,31 @@ class DayRecommendationOriginServiceTest {
         assertThat(result.detailCalls()).isEqualTo(2);
     }
 
+    @Test void dinnerUsesLatestActivityOriginAndExposesItsTitle(){
+        var refs=refs(1,List.of(ref("LUNCH","2")),List.of(ref("DAY_FOCUS","1"),ref("AFTERNOON_ACTIVITY","3")));
+        when(tourism.place("1")).thenReturn(live("1","시작 장소",126.1));
+        when(tourism.place("2")).thenReturn(live("2","점심 식당",126.2));
+        when(tourism.place("3")).thenReturn(live("3","오후 명소",126.3));
+        var result=origins.resolve(refs,"DINNER");
+        assertThat(result.originSlot()).isEqualTo("AFTERNOON_ACTIVITY");
+        assertThat(result.originTitle()).isEqualTo("오후 명소");
+    }
+
+    @Test void dinnerFallsBackToLunchWhenActivityIsMissing(){
+        var refs=refs(1,List.of(ref("LUNCH","2")),List.of(ref("DAY_FOCUS","1")));
+        when(tourism.place("1")).thenReturn(live("1","시작 장소",126.1));
+        when(tourism.place("2")).thenReturn(live("2","점심 식당",126.2));
+        var result=origins.resolve(refs,"DINNER");
+        assertThat(result.originSlot()).isEqualTo("LUNCH");
+        assertThat(result.originTitle()).isEqualTo("점심 식당");
+    }
+
     private TripPlaceScheduleService.DayReferences refs(int day,List<TripPlannerRows.Reference> meals,List<TripPlannerRows.Reference> places){
         var context=new TripPlaceScheduleService.DayContext(1,day,"trip",3,"JEJU",LocalDate.of(2026,9,18),LocalDate.of(2026,9,19),day,LocalDate.of(2026,9,17+day));
         return new TripPlaceScheduleService.DayReferences(context,meals,places,List.of("BREAKFAST","LUNCH","DINNER"));
     }
     private TripPlannerRows.Reference ref(String slot,String id){var value=new TripPlannerRows.Reference();value.setSlotType(slot);value.setContentId(id);value.setContentType("12");return value;}
     private void stub(String id,double longitude){when(tourism.place(id)).thenReturn(live(id,new Coordinates(BigDecimal.valueOf(longitude),new BigDecimal("33.5"))));}
+    private TourismLivePlace live(String id,String title,double longitude){return new TourismLivePlace(id,"12",title,"제주",null,new Coordinates(BigDecimal.valueOf(longitude),new BigDecimal("33.5")),"50","110");}
     private TourismLivePlace live(String id,Coordinates coordinates){return new TourismLivePlace(id,"12","place","제주",null,coordinates,"50","110");}
 }

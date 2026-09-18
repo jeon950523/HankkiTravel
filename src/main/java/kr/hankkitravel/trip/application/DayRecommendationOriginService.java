@@ -37,37 +37,40 @@ public final class DayRecommendationOriginService {
         var cache = new HashMap<String, Hydrated>();
         TripPlannerRows.Reference selected = null;
         Coordinates origin = null;
+        String originTitle = null;
         for (var candidate : chronology.originCandidates()) {
             var hydrated = hydrate(candidate, cache);
             if (hydrated.coordinates() != null) {
                 selected = candidate;
                 origin = hydrated.coordinates();
+                originTitle = hydrated.title();
                 break;
             }
         }
         Coordinates previousStay = hydrate(chronology.previousDayStay(), cache).coordinates();
         Coordinates currentFocus = hydrate(chronology.currentDayFocus(), cache).coordinates();
         int calls = cache.values().stream().mapToInt(Hydrated::calls).sum();
-        return new Context(origin, selected == null ? "REGION" : selected.getSlotType(), previousStay, currentFocus, calls);
+        return new Context(origin, selected == null ? "REGION" : selected.getSlotType(), originTitle, previousStay, currentFocus, calls);
     }
 
     private Hydrated hydrate(TripPlannerRows.Reference reference, Map<String, Hydrated> cache) {
         if (reference == null || reference.getContentId() == null) return Hydrated.empty();
         return cache.computeIfAbsent(reference.getContentId(), ignored -> {
             try {
-                return new Hydrated(tourism.place(reference.getContentId()).coordinates(), 1);
+                var place = tourism.place(reference.getContentId());
+                return new Hydrated(place.coordinates(), place.title(), 1);
             } catch (RuntimeException exception) {
-                return new Hydrated(null, 1);
+                return new Hydrated(null, null, 1);
             }
         });
     }
 
-    public record Context(Coordinates origin, String originSlot, Coordinates previousDayStay,
+    public record Context(Coordinates origin, String originSlot, String originTitle, Coordinates previousDayStay,
             Coordinates currentDayFocus, int detailCalls) {
         public boolean hasOrigin() { return origin != null; }
     }
 
-    private record Hydrated(Coordinates coordinates, int calls) {
-        static Hydrated empty() { return new Hydrated(null, 0); }
+    private record Hydrated(Coordinates coordinates, String title, int calls) {
+        static Hydrated empty() { return new Hydrated(null, null, 0); }
     }
 }

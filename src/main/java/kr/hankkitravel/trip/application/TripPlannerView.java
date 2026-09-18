@@ -31,11 +31,17 @@ public final class TripPlannerView {
                     fitReasons,checkBeforeVisit,sourceAttribution,null,0,0,null,null,null,List.of(),fitReasons,checkBeforeVisit,telephone);}
     }
     public record Recommendations(String slotType,List<Candidate> candidates,CallSummary callSummary,String dataAvailability,
-            String sourceAttribution,List<PerspectiveResult> perspectives,String movementContext) {
+            String sourceAttribution,List<PerspectiveResult> perspectives,String movementContext,
+            RecommendationContext recommendationContext) {
         public Recommendations { candidates=List.copyOf(candidates);perspectives=List.copyOf(perspectives); }
         public Recommendations(String slotType,List<Candidate> candidates,CallSummary callSummary,String dataAvailability,
-                String sourceAttribution){this(slotType,candidates,callSummary,dataAvailability,sourceAttribution,List.of(),null);}
+                String sourceAttribution){this(slotType,candidates,callSummary,dataAvailability,sourceAttribution,List.of(),null,null);}
+        public Recommendations(String slotType,List<Candidate> candidates,CallSummary callSummary,String dataAvailability,
+                String sourceAttribution,List<PerspectiveResult> perspectives,String movementContext){
+            this(slotType,candidates,callSummary,dataAvailability,sourceAttribution,perspectives,movementContext,null);
+        }
     }
+    public record RecommendationContext(String originSlotType,String originTitle,String originSource) { }
     public record PerspectiveResult(String perspective,String status,String message,List<Candidate> candidates) {
         public PerspectiveResult { candidates=List.copyOf(candidates); }
     }

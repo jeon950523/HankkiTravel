@@ -47,12 +47,12 @@ public final class DayRecommendationContextResolver {
     public static String label(String slot) {
         if (slot == null) return "기준 장소";
         return switch (slot) {
-            case "DAY_FOCUS" -> "오늘의 중심 장소";
+            case "DAY_FOCUS" -> "오늘 여행의 시작 장소";
             case "BREAKFAST" -> "아침 식당";
-            case "MORNING_ACTIVITY" -> "오전 관광지";
+            case "MORNING_ACTIVITY" -> "오전 관광";
             case "LUNCH" -> "점심 식당";
             case "POST_LUNCH_DESSERT" -> "점심 후 디저트";
-            case "AFTERNOON_ACTIVITY" -> "오후 관광지";
+            case "AFTERNOON_ACTIVITY" -> "오후 관광";
             case "DINNER" -> "저녁 식당";
             case "POST_DINNER_DESSERT", "POST_MEAL_DESSERT" -> "저녁 후 디저트";
             case "STAY" -> "숙소";

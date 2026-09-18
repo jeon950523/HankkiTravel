@@ -88,7 +88,9 @@ final class RouteAwareAttractionRecommendationService {
                 new TripPlannerView.PerspectiveResult("SIGNATURE_COURSE","READY","조금 더 이동하더라도 공식 지역 대표성을 함께 고려했어요.",signature));
         String availability=calls.transitFailures>0?"TRANSIT_PARTIALLY_UNAVAILABLE":nearby.isEmpty()&&signature.isEmpty()?"CURRENT_DATA_PARTIALLY_UNAVAILABLE":"CURRENT_DATA";
         return new TripPlannerView.Recommendations(slot.name(),nearby,new TripPlannerView.CallSummary(listed.calls(),calls.details,calls.transit,elapsed(started)),
-                availability,ATTRIBUTION,perspectives,context.hasAny()?"READY":"MOVEMENT_CONTEXT_REQUIRED");
+                availability,ATTRIBUTION,perspectives,context.hasAny()?"READY":"MOVEMENT_CONTEXT_REQUIRED",
+                context.start()!=null?new TripPlannerView.RecommendationContext(context.originSlot(),context.originTitle(),"CHRONOLOGICAL_ANCHOR")
+                        :new TripPlannerView.RecommendationContext(null,null,"REGION"));
     }
 
     private List<EvaluatedCandidate> evaluate(List<LiveCandidate> candidates,MovementContext context,FamilyProfileSnapshot profile,
@@ -152,7 +154,7 @@ final class RouteAwareAttractionRecommendationService {
     private MovementContext movementContext(TripPlaceScheduleService.DayReferences refs,TripPlannerView.SlotType slot,CallCounter calls){
         var resolved=contexts.resolve(refs,slot.name());calls.details+=resolved.detailCalls();
         Coordinates end=nextCoordinate(refs,slot.name(),calls);
-        return new MovementContext(resolved.origin(),end,resolved.currentDayFocus());
+        return new MovementContext(resolved.origin(),end,resolved.currentDayFocus(),resolved.originSlot(),resolved.originTitle());
     }
     private Coordinates nextCoordinate(TripPlaceScheduleService.DayReferences refs,String target,CallCounter calls){
         var combined=new ArrayList<TripPlannerRows.Reference>();combined.addAll(refs.meals());combined.addAll(refs.places());
@@ -192,7 +194,7 @@ final class RouteAwareAttractionRecommendationService {
     private long elapsed(long started){return Duration.ofNanos(System.nanoTime()-started).toMillis();}
     private record Listed(List<TourismPlace> places,int calls){}
     private record LiveCandidate(TourismPlace listed,TourismLivePlace live){}
-    private record MovementContext(Coordinates start,Coordinates end,Coordinates focus){boolean hasAny(){return start!=null||end!=null;}}
+    private record MovementContext(Coordinates start,Coordinates end,Coordinates focus,String originSlot,String originTitle){boolean hasAny(){return start!=null||end!=null;}}
     private record TransitEvidence(String state,BigDecimal duration,int transfers,long walking,TripPlannerView.TransitSummary summary){}
     private record EvaluatedCandidate(RouteAwareAttractionRanker.Input input,TripPlannerView.TransitSummary transit){}
     private static final class CallCounter {int details;int transit;int transitFailures;}

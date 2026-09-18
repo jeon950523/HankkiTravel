@@ -125,7 +125,8 @@ public class TripPlannerService {
         }
         String availability=candidates.isEmpty()?"CURRENT_DATA_PARTIALLY_UNAVAILABLE":"CURRENT_DATA";
         return new TripPlannerView.Recommendations(dessertSlot.name(),List.copyOf(candidates),
-                new TripPlannerView.CallSummary(listCalls,details,0,elapsed(started)),availability,ATTRIBUTION);
+                new TripPlannerView.CallSummary(listCalls,details,0,elapsed(started)),availability,ATTRIBUTION,List.of(),null,
+                recommendationContext(mealType,mealLive.detail().title()));
     }
     private TripPlannerView.Recommendations recommend(String guest,String trip,int day,TripPlannerView.SlotType slot,TourismContentType type){
         return recommend(guest,trip,day,slot,type,null);
@@ -154,7 +155,7 @@ public class TripPlannerService {
         candidates.sort(Comparator.comparingDouble((TripPlannerView.Candidate c)->meal==null||c.coordinates()==null?Double.MAX_VALUE:distanceKm(meal,c.coordinates()))
                 .thenComparing(TripPlannerView.Candidate::contentId,TripPlannerService::stableIdCompare));
         return new TripPlannerView.Recommendations(slot.name(),List.copyOf(candidates),new TripPlannerView.CallSummary(listCalls,details+origin.detailCalls(),0,elapsed(started)),
-                candidates.isEmpty()?"CURRENT_DATA_PARTIALLY_UNAVAILABLE":"CURRENT_DATA",ATTRIBUTION);
+                candidates.isEmpty()?"CURRENT_DATA_PARTIALLY_UNAVAILABLE":"CURRENT_DATA",ATTRIBUTION,List.of(),null,recommendationContext(origin));
     }
 
     private TripPlannerView.Recommendations restaurantCandidates(String guest,String trip,int day,String mealType,String keyword,Set<String> excluded){
@@ -186,7 +187,7 @@ public class TripPlannerService {
         return new TripPlannerView.Recommendations("RESTAURANT",List.copyOf(candidates),
                 new TripPlannerView.CallSummary(listCalls,details+origin.detailCalls(),0,elapsed(started)),
                 candidates.isEmpty()?"CURRENT_DATA_PARTIALLY_UNAVAILABLE":"CURRENT_DATA",ATTRIBUTION,List.of(),
-                center==null?"REGION":origin.originSlot());
+                center==null?"REGION":origin.originSlot(),recommendationContext(origin));
     }
 
     private TripPlannerView.Recommendations stayCandidates(String guest,String trip,int day,String keyword,Set<String> excluded){
@@ -224,7 +225,7 @@ public class TripPlannerService {
         String context=(center==null?"REGION":anchor.originSlot())+";radius="+radiusUsed+";candidateCount="+candidates.size();
         return new TripPlannerView.Recommendations(TripPlannerView.SlotType.STAY.name(),candidates,
                 new TripPlannerView.CallSummary(listCalls,details+anchor.detailCalls()+nextFocus.calls(),0,elapsed(started)),
-                candidates.isEmpty()?"CURRENT_DATA_PARTIALLY_UNAVAILABLE":"CURRENT_DATA",ATTRIBUTION,List.of(),context);
+                candidates.isEmpty()?"CURRENT_DATA_PARTIALLY_UNAVAILABLE":"CURRENT_DATA",ATTRIBUTION,List.of(),context,recommendationContext(anchor));
     }
     public TripPlannerView.Reference select(String guest,String trip,int day,TripPlannerView.SlotType slot,String contentId){
         var c=schedules.context(guest,trip,day);if(slot==null)throw TripProblem.invalid("PLACE_SLOT_TYPE_INVALID");
@@ -323,6 +324,13 @@ public class TripPlannerService {
         return new RouteAnchor(null,calls,"REGION");
     }
     private Set<String> safeIds(Set<String> values){if(values==null)return Set.of();return values.stream().filter(Objects::nonNull).filter(value->value.matches("[0-9]{1,20}")).collect(java.util.stream.Collectors.toUnmodifiableSet());}
+    private TripPlannerView.RecommendationContext recommendationContext(DayRecommendationOriginService.Context context){
+        return context==null||!context.hasOrigin()?new TripPlannerView.RecommendationContext(null,null,"REGION")
+                :recommendationContext(context.originSlot(),context.originTitle());
+    }
+    private TripPlannerView.RecommendationContext recommendationContext(String slot,String title){
+        return new TripPlannerView.RecommendationContext(slot,title,"CHRONOLOGICAL_ANCHOR");
+    }
     private List<Integer> parseRadii(String value){
         try{var parsed=Arrays.stream(value.split(",")).map(String::trim).map(Integer::parseInt).toList();
             if(parsed.isEmpty()||parsed.stream().anyMatch(radius->radius<100||radius>20000)||!parsed.equals(parsed.stream().sorted().toList()))throw new IllegalArgumentException();return parsed;
