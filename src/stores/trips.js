@@ -51,18 +51,20 @@ export const useTripsStore = defineStore('trips', {
         return result
       })
     },
-    async otherRestaurants(guest, trip, dayNumber, excluded = []) {
+    async otherRestaurants(guest, trip, dayNumber, mealType, excluded = []) {
+      if (Array.isArray(mealType)) { excluded = mealType; mealType = '' }
       return this.run(`restaurant-other:${dayNumber}`, async () => {
-        const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/restaurant-alternatives`, {
+        const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/restaurant-alternatives?mealType=${encodeURIComponent(mealType || '')}`, {
           method: 'POST', body: JSON.stringify({ exclude: excluded.join(',') }),
         })
         this.alternativeResults[`${dayKey(trip, dayNumber)}:RESTAURANT`] = result
         return result
       })
     },
-    async searchRestaurants(guest, trip, dayNumber, keyword) {
+    async searchRestaurants(guest, trip, dayNumber, mealType, keyword) {
+      if (keyword === undefined) { keyword = mealType; mealType = '' }
       return this.run(`restaurant-search:${dayNumber}`, async () => {
-        const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/restaurant-search?keyword=${encodeURIComponent(keyword)}`)
+        const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/restaurant-search?mealType=${encodeURIComponent(mealType || '')}&keyword=${encodeURIComponent(keyword)}`)
         this.alternativeResults[`${dayKey(trip, dayNumber)}:RESTAURANT`] = result
         return result
       })
@@ -158,6 +160,22 @@ export const useTripsStore = defineStore('trips', {
         return result
       })
     },
+    async otherDesserts(guest, trip, dayNumber, mealType, excluded = []) {
+      return this.run(`dessert-other:${dayNumber}:${mealType}`, async () => {
+        const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/dessert-alternatives?mealType=${encodeURIComponent(mealType)}`, {
+          method: 'POST', body: JSON.stringify({ exclude: excluded.join(',') }),
+        })
+        this.dessertResults[`${dayKey(trip, dayNumber)}:${mealType}`] = result
+        return result
+      })
+    },
+    async searchDesserts(guest, trip, dayNumber, mealType, keyword) {
+      return this.run(`dessert-search:${dayNumber}:${mealType}`, async () => {
+        const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/dessert-search?mealType=${encodeURIComponent(mealType)}&keyword=${encodeURIComponent(keyword)}`)
+        this.dessertResults[`${dayKey(trip, dayNumber)}:${mealType}`] = result
+        return result
+      })
+    },
     async selectPlace(guest, trip, dayNumber, slotType, contentId) {
       return this.run(`place-anchor:${dayNumber}:${slotType}`, async () => {
         const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/place-anchors/${slotType}`, { method: 'PUT', body: JSON.stringify({ contentId }) })
@@ -180,6 +198,8 @@ export const useTripsStore = defineStore('trips', {
       try {
         const result = await requestJson(`${pathFor(guest, trip)}/days/${dayNumber}/planner`)
         this.planners[key] = result
+        const targetDay = this.detail?.days.find(day => day.dayNumber === dayNumber)
+        if (targetDay && result.completion) targetDay.completion = { ...result.completion, requiredComplete: result.completion.requiredComplete ?? result.completion.isRequiredComplete }
         return result
       } catch (error) {
         this.plannerErrors[key] = error.message || '오늘 일정을 불러오지 못했어요.'

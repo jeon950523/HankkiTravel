@@ -1,19 +1,22 @@
-const ORDER = ['DAY_FOCUS', 'BREAKFAST', 'MORNING_ACTIVITY', 'LUNCH', 'POST_LUNCH_DESSERT', 'AFTERNOON_ACTIVITY', 'DINNER', 'POST_DINNER_DESSERT', 'STAY']
+const MEAL_ORDER = ['BREAKFAST', 'LUNCH', 'DINNER']
 
-export function resolveNextDecision({ day, plannerItems = [], stayRequired = false, skipped = [] }) {
+export function evaluateDayCompletion({ day, plannerItems = [], stayRequired = false }) {
   const complete = new Set(plannerItems.map(item => item.slotType))
-  const skippedSet = new Set(skipped)
+  const requiredMealTypes = (day?.mealSlots || []).map(slot => slot.mealType)
+  const completedMealSlots = requiredMealTypes.filter(type => complete.has(type) || day.mealSlots.find(slot => slot.mealType === type)?.anchor).length
+  const stayCompleted = complete.has('STAY')
+  return { requiredMealSlots: requiredMealTypes.length, completedMealSlots, stayRequired, stayCompleted,
+    isRequiredComplete: completedMealSlots === requiredMealTypes.length && (!stayRequired || stayCompleted) }
+}
+
+export function resolveNextDecision({ day, plannerItems = [], stayRequired = false }) {
+  const complete = new Set(plannerItems.map(item => item.slotType))
+  if (!complete.has('DAY_FOCUS')) return 'DAY_FOCUS'
   const mealTypes = new Set((day?.mealSlots || []).map(slot => slot.mealType))
-  const required = ORDER.filter(slot => {
-    if (['BREAKFAST', 'LUNCH', 'DINNER'].includes(slot)) return mealTypes.has(slot)
-    if (slot === 'MORNING_ACTIVITY') return mealTypes.has('BREAKFAST')
-    if (slot === 'POST_LUNCH_DESSERT') return mealTypes.has('LUNCH') && complete.has('LUNCH')
-    if (slot === 'AFTERNOON_ACTIVITY') return mealTypes.has('LUNCH') || mealTypes.has('DINNER')
-    if (slot === 'POST_DINNER_DESSERT') return mealTypes.has('DINNER') && complete.has('DINNER')
-    if (slot === 'STAY') return stayRequired
-    return true
-  })
-  return required.find(slot => !complete.has(slot) && !skippedSet.has(slot)) || 'PLANNER'
+  const pendingMeal = MEAL_ORDER.find(slot => mealTypes.has(slot) && !complete.has(slot) && !day.mealSlots.find(item => item.mealType === slot)?.anchor)
+  if (pendingMeal) return pendingMeal
+  if (stayRequired && !complete.has('STAY')) return 'STAY'
+  return 'DAY_COMPLETE'
 }
 
 export function decisionState(slotType, plannerItems = [], skipped = [], stayRequired = true) {

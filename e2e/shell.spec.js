@@ -197,7 +197,7 @@ test('GYEONGJU 1박2일은 선택 Day만 hydrate하고 marker를 완전히 교�
   await expect(page.getByRole('heading', { name: '경주 1박 2일' })).toBeVisible()
   await expect(page.getByRole('button', { name: '1번 첨성대' })).toBeVisible()
   expect(plannerCalls).toEqual([1])
-  await page.getByRole('button', { name: /DAY 2/ }).click()
+  await page.locator('.day-summary-switcher').getByRole('button', { name: /DAY 2/ }).click()
   await expect(page.getByRole('button', { name: '1번 불국사' })).toBeVisible()
   await expect(page.getByRole('button', { name: '1번 첨성대' })).toHaveCount(0)
   expect(plannerCalls).toEqual([1, 2])

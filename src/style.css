@@ -419,3 +419,22 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   .route-sanity { grid-template-columns: 1fr; }
   .route-sanity > .text-button { justify-self: start; }
 }
+.next-decision-primary,.day-complete-card,.final-plan-header,.final-plan-day { display: grid; gap: 16px; }
+.optional-inline { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--color-border); }
+.optional-inline > span { color: var(--color-text-muted); font-size: .9rem; }
+.candidate-grid,.final-plan-page { display: grid; gap: 16px; }
+.compact-live-card { grid-template-columns: minmax(110px,180px) 1fr; }
+.final-plan-page { gap: 24px; }
+.final-plan-header { grid-template-columns: 1fr auto; align-items: start; }
+.final-plan-header > .action-button { grid-column: 1 / -1; justify-self: start; }
+.final-plan-day .planner-layout { margin-top: 8px; }
+.final-plan-leg { cursor: default; }
+@media (max-width: 768px) {
+  .final-plan-header,.compact-live-card { grid-template-columns: 1fr; }
+  .next-decision-primary .action-button,.day-complete-card .action-button { width: 100%; }
+}
+@media (max-width: 390px) {
+  .optional-inline { align-items: stretch; flex-direction: column; }
+  .optional-inline .text-button { min-height: 44px; text-align: left; }
+  .final-plan-header .trip-overview-facts { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
