@@ -295,6 +295,12 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 .movement-evidence strong { color: var(--color-olive); font-size: 13px; }
 .movement-evidence p { color: var(--color-charcoal); font-weight: 650; }
 .movement-evidence span { color: var(--color-secondary); font-size: 12px; }
+.movement-evidence .text-button { justify-self: start; margin-top: 4px; }
+.menu-evidence { display: grid; gap: 4px; padding: 12px; border-left: 3px solid var(--color-olive); background: var(--color-soft); border-radius: 0 10px 10px 0; }
+.menu-evidence strong { color: var(--color-olive); font-size: 13px; }
+.menu-evidence p { color: var(--color-charcoal); line-height: 1.55; }
+.evidence-facts > div:first-child { border: 1px solid rgba(184,92,57,.32); }
+.evidence-notice { color: var(--color-accent-text); font-size: 13px; line-height: 1.6; }
 .day-switcher { display: flex; gap: 8px; margin: 26px 0; overflow-x: auto; padding-bottom: 4px; }
 .day-switcher button, .slot-switcher button { min-height: 46px; padding: 9px 16px; border-radius: 999px; border: 1px solid var(--color-border-control); color: var(--color-olive); background: transparent; white-space: nowrap; font-weight: 700; }
 .day-switcher button.active, .slot-switcher button.active { color: white; background: var(--color-olive); border-color: var(--color-olive); }
@@ -336,6 +342,7 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 .planner-leg.active { border-color: var(--color-terracotta); box-shadow: 0 0 0 2px rgba(184,92,57,.12); }
 .planner-leg.warning { border-color: rgba(184,92,57,.55); background: #fff8f3; }
 .planner-leg small { color: var(--color-accent-text); font-weight: 700; }
+.planner-directions-link { display: inline-flex; margin: -2px 0 12px 26px; }
 .compact-decisions { display: grid; gap: 8px; padding: 14px; border-radius: 14px; background: var(--color-soft); }
 .compact-decision { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 8px 0; }
 .compact-decision > span { color: var(--color-olive); font-weight: 900; }
@@ -430,6 +437,7 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 .final-plan-header > .action-button { grid-column: 1 / -1; justify-self: start; }
 .final-plan-day .planner-layout { margin-top: 8px; }
 .final-plan-leg { cursor: default; }
+.final-plan-leg .text-button { justify-self: start; margin-top: 5px; }
 .final-result-card .contact-actions { margin-top: 12px; }
 .final-result-card .contact-actions .action-button { min-height: 40px; padding: 8px 12px; }
 .final-movement-evidence { margin: 8px 0 0; color: var(--color-secondary); line-height: 1.65; }

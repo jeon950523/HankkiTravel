@@ -11,6 +11,16 @@ export const useTripsStore = defineStore('trips', {
     plannerLoading: {}, plannerErrors: {}, recommendationErrors: {}, loading: false, actionLoading: '', error: null,
   }),
   actions: {
+    resetTransient(trip) {
+      const prefix = `${trip}:`
+      for (const collection of [this.restaurantResults, this.dessertResults, this.placeResults,
+        this.alternativeResults, this.focusResults, this.selectedFocus, this.planners,
+        this.plannerLoading, this.plannerErrors, this.recommendationErrors]) {
+        Object.keys(collection).filter(key => key.startsWith(prefix)).forEach(key => delete collection[key])
+      }
+      this.actionLoading = ''
+      this.error = null
+    },
     async run(name, task) {
       if (this.actionLoading) return null
       this.actionLoading = name

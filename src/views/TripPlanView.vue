@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import KakaoDayMap from '../components/KakaoDayMap.vue'
 import KtoImage from '../components/KtoImage.vue'
 import StatusMessage from '../components/StatusMessage.vue'
+import { kakaoDirectionsAction } from '../domain/kakaoLinks'
 import { buildPlannerDisplayItems, buildPlannerLegs } from '../domain/plannerMap'
 import { SLOT_LABELS, showStayForDay, transitSummary } from '../domain/trip'
 import { evaluateDayCompletion } from '../domain/progressivePlanner'
@@ -56,10 +57,17 @@ const finalActions = item => restaurantExternalActions({
   ...item,
   phone: item.telephone,
 })
+const finalDirections = (day, index) => kakaoDirectionsAction({
+  start: day.items[index],
+  end: day.items[index + 1],
+  transportMode: day.displayLegs[index]?.mode || profile.value?.transportMode,
+})
+const isMealItem = item => item?.contentType === '39'
 
 onMounted(async () => {
   try {
     guestId.value = await guest.ensureGuest()
+    trips.resetTransient(tripId.value)
     await Promise.all([trips.load(guestId.value, tripId.value), profiles.load(guestId.value)])
     for (const day of trips.detail?.days || []) await trips.loadPlanner(guestId.value, tripId.value, day.dayNumber)
   } finally {
@@ -81,13 +89,13 @@ onMounted(async () => {
       <RouterLink class="action-button button-primary" :to="`/travel/${tripId}`">이어서 준비하기</RouterLink>
     </section>
     <template v-else>
-      <header class="surface final-plan-header"><div><p class="eyebrow">완성된 여행 플랜</p><h1 ref="planHeading" tabindex="-1">나의 {{ regionName }} {{ trips.detail.durationDays - 1 }}박 {{ trips.detail.durationDays }}일 여행 플랜</h1><p>{{ formatDate(trips.detail.startDate) }} ~ {{ formatDate(trips.detail.endDate) }} · 가족 프로필 · {{ profileName }}</p></div><dl class="trip-overview-facts"><div><dt>DAY</dt><dd>{{ trips.detail.durationDays }}일</dd></div><div><dt>식사</dt><dd>{{ selectedMealCount }}/{{ mealCount }}</dd></div><div><dt>숙소</dt><dd>{{ stayCompleted }}/{{ stayRequired }}</dd></div><div><dt>이동 부담 경고</dt><dd>{{ warningCount }}</dd></div></dl><RouterLink class="action-button button-secondary" :to="`/travel/${tripId}`">여행 수정하기</RouterLink></header>
+      <header class="surface final-plan-header"><div><p class="eyebrow">완성된 여행 플랜</p><h1 ref="planHeading" tabindex="-1">나의 {{ regionName }} {{ trips.detail.durationDays - 1 }}박 {{ trips.detail.durationDays }}일 여행 플랜</h1><p>{{ formatDate(trips.detail.startDate) }} ~ {{ formatDate(trips.detail.endDate) }} · 가족 프로필 · {{ profileName }}</p></div><dl class="trip-overview-facts"><div><dt>DAY</dt><dd>{{ trips.detail.durationDays }}일</dd></div><div><dt>식사</dt><dd>{{ selectedMealCount }}/{{ mealCount }}</dd></div><div><dt>숙소</dt><dd>{{ stayCompleted }}/{{ stayRequired }}</dd></div><div><dt>이동 부담 경고</dt><dd>{{ warningCount }}</dd></div></dl><RouterLink class="action-button button-secondary" :to="{ path: `/travel/${tripId}`, query: { edit: '1' } }">여행 수정하기</RouterLink></header>
 
       <section v-for="day in tripDays" :key="day.dayNumber" class="surface final-plan-day" :aria-labelledby="`final-day-${day.dayNumber}`">
-        <div class="planner-heading"><div><p class="eyebrow">{{ formatDate(day.travelDate) }}</p><h2 :id="`final-day-${day.dayNumber}`">DAY {{ day.dayNumber }}</h2></div><RouterLink class="text-button" :to="`/travel/${tripId}?day=${day.dayNumber}`">DAY {{ day.dayNumber }} 수정</RouterLink></div>
+        <div class="planner-heading"><div><p class="eyebrow">{{ formatDate(day.travelDate) }}</p><h2 :id="`final-day-${day.dayNumber}`">DAY {{ day.dayNumber }}</h2></div><RouterLink class="text-button" :to="{ path: `/travel/${tripId}`, query: { day: day.dayNumber, edit: '1' } }">DAY {{ day.dayNumber }} 수정</RouterLink></div>
         <StatusMessage v-if="day.loadError" kind="error" :title="`DAY ${day.dayNumber} 일정 정보를 현재 다시 확인하지 못했어요.`">다른 Day의 일정은 그대로 볼 수 있어요. <button class="text-button" type="button" @click="trips.loadPlanner(guestId, tripId, day.dayNumber)">다시 시도</button></StatusMessage>
         <aside v-if="day.routeSanity" class="route-sanity" :data-severity="day.routeSanity.severity"><strong>이동 부담 · {{ routeSanityLabel(day.routeSanity.severity) }}</strong><span>{{ routeSanitySummary(day.routeSanity) }}</span></aside>
-        <div class="planner-layout"><KakaoDayMap :items="day.items" :legs="day.displayLegs" /><div class="timeline-panel"><ol class="timeline"><li v-for="(item, index) in day.items" :key="item.plannerItemId"><article class="surface planner-card final-result-card"><span class="timeline-number">{{ item.displayIndex }}</span><KtoImage :src="item.imageUrl" :alt="`${item.title} 관광정보 이미지`" /><div><p class="card-kicker">{{ SLOT_LABELS[item.slotType] }}</p><h3>{{ item.title }}</h3><p class="address">{{ item.address }}</p><p class="final-movement-evidence">{{ finalMovementEvidence(day, index) }}</p><div class="contact-actions"><a v-for="action in finalActions(item)" :key="action.kind" class="action-button button-secondary" :href="action.href" :target="action.kind === 'phone' ? undefined : '_blank'" :rel="action.kind === 'phone' ? undefined : 'noopener noreferrer'">{{ action.label }}</a></div><p class="source-line">{{ item.sourceAttribution }}</p></div></article><div v-if="day.displayLegs[index]" class="planner-leg final-plan-leg"><strong>{{ day.displayLegs[index].displayFrom }} → {{ day.displayLegs[index].displayTo }}</strong><span>{{ transitSummary(day.displayLegs[index]) }}</span></div></li></ol></div></div>
+        <div class="planner-layout"><KakaoDayMap :items="day.items" :legs="day.displayLegs" /><div class="timeline-panel"><ol class="timeline"><li v-for="(item, index) in day.items" :key="item.plannerItemId"><article class="surface planner-card final-result-card"><span class="timeline-number">{{ item.displayIndex }}</span><KtoImage :src="item.imageUrl" :alt="`${item.title} 관광정보 이미지`" /><div><p class="card-kicker">{{ SLOT_LABELS[item.slotType] }}</p><h3>{{ item.title }}</h3><p class="address">{{ item.address }}</p><div v-if="isMealItem(item)" class="menu-evidence"><strong>대표 메뉴</strong><p v-if="item.menuSummary?.length">{{ item.menuSummary.join(' · ') }}</p><p v-else>공개된 대표메뉴 정보가 없어요. 방문 전에 메뉴를 확인해 주세요.</p></div><p class="final-movement-evidence">{{ finalMovementEvidence(day, index) }}</p><div class="contact-actions"><a v-for="action in finalActions(item)" :key="action.kind" class="action-button button-secondary" :href="action.href" :target="action.kind === 'phone' ? undefined : '_blank'" :rel="action.kind === 'phone' ? undefined : 'noopener noreferrer'">{{ action.label }}</a></div><p class="source-line">{{ item.sourceAttribution }}</p></div></article><div v-if="day.displayLegs[index]" class="planner-leg final-plan-leg"><strong>{{ day.displayLegs[index].displayFrom }} → {{ day.displayLegs[index].displayTo }}</strong><span>{{ transitSummary(day.displayLegs[index]) }}</span><a class="text-button" :href="finalDirections(day, index).href" target="_blank" rel="noopener noreferrer">{{ finalDirections(day, index).label }}</a></div></li></ol></div></div>
       </section>
     </template>
   </main>

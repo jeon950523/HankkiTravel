@@ -84,3 +84,22 @@ it('keeps restaurant and place alternative searches transient and uses bounded s
   expect(store.alternativeResults['trip:1:STAY'].candidates[0].contentId).toBe('777')
   expect(localStorage.length).toBe(0)
 })
+
+it('edit re-entry clears only transient trip state and keeps backend detail anchors', () => {
+  const store = useTripsStore()
+  store.detail = { tripPublicId: 'trip', days: [{ mealSlots: [{ anchor: { contentId: '123' } }] }] }
+  store.restaurantResults['trip:slot'] = { candidates: [{ contentId: 'old' }] }
+  store.alternativeResults['trip:1:RESTAURANT'] = { candidates: [{ contentId: 'old' }] }
+  store.planners['trip:1'] = { items: [{ contentId: 'old' }] }
+  store.planners['another:1'] = { items: [{ contentId: 'keep' }] }
+  store.actionLoading = 'meal:slot'
+
+  store.resetTransient('trip')
+
+  expect(store.detail.days[0].mealSlots[0].anchor.contentId).toBe('123')
+  expect(store.restaurantResults['trip:slot']).toBeUndefined()
+  expect(store.alternativeResults['trip:1:RESTAURANT']).toBeUndefined()
+  expect(store.planners['trip:1']).toBeUndefined()
+  expect(store.planners['another:1'].items[0].contentId).toBe('keep')
+  expect(store.actionLoading).toBe('')
+})

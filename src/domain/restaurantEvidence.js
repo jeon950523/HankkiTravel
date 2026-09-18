@@ -1,3 +1,5 @@
+import { buildKakaoPlaceSearchUrl } from './kakaoLinks'
+
 const transitFor = candidate => candidate?.transitSummary || candidate?.transportEvidence
 
 const distanceLabel = meters => meters < 1000
@@ -29,9 +31,19 @@ export function restaurantMovementEvidence(candidate, transportMode) {
 export const telephoneHref = value => `tel:${String(value || '').replace(/[^0-9+]/g, '')}`
 
 export function kakaoSearchUrl(candidate) {
-  const query = [candidate?.title, candidate?.address].filter(Boolean).join(' ').trim()
-  return `https://map.kakao.com/link/search/${encodeURIComponent(query)}`
+  return buildKakaoPlaceSearchUrl(candidate)
 }
+
+export function coveragePresentation(value) {
+  const coverage = Number(value)
+  if (!Number.isFinite(coverage)) return { label: '정보 근거 미확인', level: 'UNKNOWN', notice: '' }
+  if (coverage >= 70) return { label: '정보 근거 충분', level: 'SUFFICIENT', notice: '' }
+  if (coverage >= 40) return { label: '정보 근거 일부', level: 'PARTIAL', notice: '확인 가능한 정보만으로 적합도를 계산했어요.' }
+  return { label: '정보 근거 적음', level: 'LOW', notice: '확인된 정보가 아직 적어 참고용으로 봐주세요.' }
+}
+
+export const hasUnscoredDimensions = candidate => (candidate?.evaluatedDimensions || [])
+  .some(item => item.evaluated === false || item.evidenceState === 'NOT_EVALUATED')
 
 export function restaurantExternalActions(candidate) {
   const actions = []

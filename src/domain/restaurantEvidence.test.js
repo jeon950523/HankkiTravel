@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { kakaoSearchUrl, restaurantExternalActions, restaurantMovementEvidence } from './restaurantEvidence'
+import { coveragePresentation, hasUnscoredDimensions, kakaoSearchUrl, restaurantExternalActions, restaurantMovementEvidence } from './restaurantEvidence'
 
 describe('식당 외부 확인 CTA', () => {
   it('strict match가 없으면 Kakao link/search 계약과 URL 인코딩을 지킨다', () => {
@@ -15,6 +15,16 @@ describe('식당 외부 확인 CTA', () => {
     [{ phone: null, placeUrl: null, title: '식당', address: '제주시' }, ['카카오맵에서 검색']],
   ])('전화와 strict match 조합에 맞는 CTA만 노출한다', (candidate, labels) => {
     expect(restaurantExternalActions(candidate).map(item => item.label)).toEqual(labels)
+  })
+})
+
+describe('점수와 정보 근거 표현', () => {
+  it('낮은 coverage는 점수보다 근거 부족을 먼저 설명한다', () => {
+    expect(coveragePresentation(30)).toEqual({ label: '정보 근거 적음', level: 'LOW', notice: '확인된 정보가 아직 적어 참고용으로 봐주세요.' })
+  })
+
+  it('미평가 dimension을 점수 차감으로 오해하지 않게 감지한다', () => {
+    expect(hasUnscoredDimensions({ evaluatedDimensions: [{ evaluated: false }] })).toBe(true)
   })
 })
 
