@@ -24,6 +24,14 @@ class RouteAwareAttractionRankerTest {
         assertThat(first.getFirst().overallScore()).isGreaterThan(0);assertThat(first.getFirst().evidenceCoverage()).isLessThan(100);
     }
 
+    @Test void sameCandidateReceivesPerspectiveSpecificScore(){
+        var candidate=input("1",95,70,90,55,40);
+        var nearby=ranker.rank(List.of(candidate),RouteAwareAttractionRanker.Perspective.NEARBY_COURSE).getFirst();
+        var signature=ranker.rank(List.of(candidate),RouteAwareAttractionRanker.Perspective.SIGNATURE_COURSE).getFirst();
+        assertThat(nearby.input().contentId()).isEqualTo(signature.input().contentId());
+        assertThat(nearby.overallScore()).isNotEqualTo(signature.overallScore());
+    }
+
     private RouteAwareAttractionRanker.Input input(String id,Integer route,Integer focus,Integer mobility,int relevance,Integer demand){
         return new RouteAwareAttractionRanker.Input(id,route,focus,mobility,relevance,demand,null,null,null,List.of(),List.of(),List.of());
     }
