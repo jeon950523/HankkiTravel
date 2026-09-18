@@ -29,6 +29,8 @@ public interface TripPlannerMapper {
         ORDER BY CASE s.meal_type WHEN 'BREAKFAST' THEN 1 WHEN 'LUNCH' THEN 2 ELSE 3 END
         """)
     List<TripPlannerRows.Reference> mealReferences(long dayId);
+    @Select("SELECT meal_type FROM trip_meal_slots WHERE trip_day_id=#{dayId} ORDER BY CASE meal_type WHEN 'BREAKFAST' THEN 1 WHEN 'LUNCH' THEN 2 ELSE 3 END")
+    List<String> mealSlotTypes(long dayId);
     @Insert("""
         INSERT INTO trip_day_place_anchors(public_id,trip_day_id,slot_type,provider,content_id,content_type)
         VALUES(#{publicId},#{tripDayId},#{slotType},'KTO',#{contentId},#{contentType})

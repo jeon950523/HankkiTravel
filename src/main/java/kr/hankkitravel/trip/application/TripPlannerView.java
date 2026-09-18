@@ -16,7 +16,7 @@ public final class TripPlannerView {
             Coordinates coordinates,String informationEvidence,List<String> fitReasons,List<String> checkBeforeVisit,
             String sourceAttribution,String perspective,int overallScore,int evidenceCoverage,RouteBurden routeBurden,
             Long distanceMeters,TransitSummary transitSummary,List<String> familyMobilityEvidence,
-            List<String> reasons,List<String> cautions) {
+            List<String> reasons,List<String> cautions,String telephone) {
         public Candidate {
             fitReasons=List.copyOf(fitReasons);checkBeforeVisit=List.copyOf(checkBeforeVisit);
             familyMobilityEvidence=List.copyOf(familyMobilityEvidence);reasons=List.copyOf(reasons);cautions=List.copyOf(cautions);
@@ -24,7 +24,11 @@ public final class TripPlannerView {
         public Candidate(String contentId,String contentType,String title,String areaLabel,String imageUrl,String address,
                 Coordinates coordinates,String informationEvidence,List<String> fitReasons,List<String> checkBeforeVisit,
                 String sourceAttribution){this(contentId,contentType,title,areaLabel,imageUrl,address,coordinates,informationEvidence,
-                    fitReasons,checkBeforeVisit,sourceAttribution,null,0,0,null,null,null,List.of(),fitReasons,checkBeforeVisit);}
+                    fitReasons,checkBeforeVisit,sourceAttribution,null,0,0,null,null,null,List.of(),fitReasons,checkBeforeVisit,null);}
+        public Candidate(String contentId,String contentType,String title,String areaLabel,String imageUrl,String address,
+                Coordinates coordinates,String informationEvidence,List<String> fitReasons,List<String> checkBeforeVisit,
+                String sourceAttribution,String telephone){this(contentId,contentType,title,areaLabel,imageUrl,address,coordinates,informationEvidence,
+                    fitReasons,checkBeforeVisit,sourceAttribution,null,0,0,null,null,null,List.of(),fitReasons,checkBeforeVisit,telephone);}
     }
     public record Recommendations(String slotType,List<Candidate> candidates,CallSummary callSummary,String dataAvailability,
             String sourceAttribution,List<PerspectiveResult> perspectives,String movementContext) {
@@ -40,9 +44,9 @@ public final class TripPlannerView {
             long explicitWalkingDistanceMeters) { }
     public record CallSummary(int tourListCalls,int tourDetailCalls,int transitCalls,long elapsedMillis) { }
     public record Planner(String tripPublicId,int dayNumber,LocalDate travelDate,List<Item> items,List<Leg> legs,
-            CallSummary callSummary,DayBurden dayBurden,RouteSanity routeSanity) {
+            CallSummary callSummary,DayBurden dayBurden,RouteSanity routeSanity,TripView.DayCompletion completion) {
         public Planner(String tripPublicId,int dayNumber,LocalDate travelDate,List<Item> items,List<Leg> legs,
-                CallSummary callSummary){this(tripPublicId,dayNumber,travelDate,items,legs,callSummary,null,null);}
+                CallSummary callSummary){this(tripPublicId,dayNumber,travelDate,items,legs,callSummary,null,null,null);}
     }
     public record DayBurden(String state,String level,int selectedPlaceCount,BigDecimal transitMinutes,
             long explicitWalkingDistanceMeters,int transferCount,String caution) { }

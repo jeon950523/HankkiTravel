@@ -35,10 +35,12 @@ class RouteAwareAttractionRecommendationServiceTest {
     TourismRealtimeGateway tourism=mock(TourismRealtimeGateway.class);
     TransitRouteFinder transit=mock(TransitRouteFinder.class);
     AreaDemandSignalProvider demand=mock(AreaDemandSignalProvider.class);
+    DayRecommendationOriginService contexts;
     RouteAwareAttractionRecommendationService service;
 
     @BeforeEach void setUp(){
-        service=new RouteAwareAttractionRecommendationService(schedules,profiles,tourism,transit,demand,15,6,2,90,25,150,50,20,15,15,20,15,40,25);
+        contexts=new DayRecommendationOriginService(schedules,tourism,new DayRecommendationContextResolver());
+        service=new RouteAwareAttractionRecommendationService(schedules,profiles,tourism,transit,demand,contexts,15,6,2,90,25,150,50,20,15,15,20,15,40,25);
         var context=new TripPlaceScheduleService.DayContext(1,2,"trip",3,"JEJU",LocalDate.of(2026,9,20),LocalDate.of(2026,9,20),1,LocalDate.of(2026,9,20));
         when(schedules.references("guest","trip",1)).thenReturn(new TripPlaceScheduleService.DayReferences(context,List.of(ref("LUNCH","39001")),List.of()));
         when(profiles.owned("guest",3)).thenReturn(profile("PUBLIC_TRANSIT"));

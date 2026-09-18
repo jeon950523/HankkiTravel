@@ -34,12 +34,13 @@ final class RouteAwareAttractionRecommendationService {
     private static final String ATTRIBUTION="출처: ⓒ한국관광공사";
     private final TripPlaceScheduleService schedules;private final FamilyProfileApplicationService profiles;
     private final TourismRealtimeGateway tourism;private final TransitRouteFinder transit;private final AreaDemandSignalProvider demand;
+    private final DayRecommendationOriginService contexts;
     private final int listSize;private final int detailLimit;private final int transitLimit;
     private final int nearbyMaxTransitMinutes;private final long nearbyMaxDistanceMeters;private final int signatureMaxTransitMinutes;
     private final RouteAwareAttractionRanker ranker;
 
     RouteAwareAttractionRecommendationService(TripPlaceScheduleService schedules,FamilyProfileApplicationService profiles,
-            TourismRealtimeGateway tourism,TransitRouteFinder transit,AreaDemandSignalProvider demand,
+            TourismRealtimeGateway tourism,TransitRouteFinder transit,AreaDemandSignalProvider demand,DayRecommendationOriginService contexts,
             @Value("${hankki.planner.list-size:15}")int listSize,
             @Value("${hankki.planner.detail-limit:6}")int detailLimit,
             @Value("${hankki.planner.attraction.transit-call-limit:6}")int transitLimit,
@@ -56,7 +57,7 @@ final class RouteAwareAttractionRecommendationService {
             @Value("${hankki.planner.attraction.weights.signature.demand:25}")int signatureDemand){
         if(listSize<1||listSize>30||detailLimit<1||detailLimit>listSize||transitLimit<1||nearbyMaxTransitMinutes<1
                 ||nearbyMaxDistanceKm<=0||signatureMaxTransitMinutes<nearbyMaxTransitMinutes)throw new IllegalArgumentException("관광지 추천 설정을 확인하세요.");
-        this.schedules=schedules;this.profiles=profiles;this.tourism=tourism;this.transit=transit;this.demand=demand;
+        this.schedules=schedules;this.profiles=profiles;this.tourism=tourism;this.transit=transit;this.demand=demand;this.contexts=contexts;
         this.listSize=listSize;this.detailLimit=detailLimit;this.transitLimit=transitLimit;
         this.nearbyMaxTransitMinutes=nearbyMaxTransitMinutes;this.nearbyMaxDistanceMeters=Math.round(nearbyMaxDistanceKm*1000);
         this.signatureMaxTransitMinutes=signatureMaxTransitMinutes;
@@ -146,13 +147,18 @@ final class RouteAwareAttractionRecommendationService {
         var live=candidates.stream().filter(value->value.live().contentId().equals(ranked.input().contentId())).findFirst().orElseThrow().live();var input=ranked.input();
         return new TripPlannerView.Candidate(live.contentId(),live.contentType(),live.title(),areaLabel(live.address()),live.firstImage(),live.address(),live.coordinates(),
                 "TOUR_API_LIVE",input.reasons(),input.cautions(),ATTRIBUTION,perspective,ranked.overallScore(),ranked.evidenceCoverage(),input.routeBurden(),
-                input.distanceMeters(),input.transit(),input.mobilityEvidence(),input.reasons(),input.cautions());
+                input.distanceMeters(),input.transit(),input.mobilityEvidence(),input.reasons(),input.cautions(),null);
     }
     private MovementContext movementContext(TripPlaceScheduleService.DayReferences refs,TripPlannerView.SlotType slot,CallCounter calls){
-        Coordinates focus=coordinate(refs.places(),"DAY_FOCUS",calls);Coordinates start;Coordinates end;
-        if(slot==TripPlannerView.SlotType.MORNING_ACTIVITY){start=focus;end=firstCoordinate(refs.meals(),List.of("BREAKFAST","LUNCH"),calls);}
-        else{start=coordinate(refs.meals(),"LUNCH",calls);var combined=new ArrayList<TripPlannerRows.Reference>();combined.addAll(refs.meals());combined.addAll(refs.places());end=firstCoordinate(combined,List.of("DINNER","STAY"),calls);}
-        return new MovementContext(start,end,focus);
+        var resolved=contexts.resolve(refs,slot.name());calls.details+=resolved.detailCalls();
+        Coordinates end=nextCoordinate(refs,slot.name(),calls);
+        return new MovementContext(resolved.origin(),end,resolved.currentDayFocus());
+    }
+    private Coordinates nextCoordinate(TripPlaceScheduleService.DayReferences refs,String target,CallCounter calls){
+        var combined=new ArrayList<TripPlannerRows.Reference>();combined.addAll(refs.meals());combined.addAll(refs.places());
+        return combined.stream().filter(value->DayRecommendationContextResolver.order(value.getSlotType())>DayRecommendationContextResolver.order(target))
+                .sorted(Comparator.comparingInt(value->DayRecommendationContextResolver.order(value.getSlotType())))
+                .map(value->hydrate(value,calls)).filter(java.util.Objects::nonNull).findFirst().orElse(null);
     }
     private Coordinates coordinate(List<TripPlannerRows.Reference> refs,String slot,CallCounter calls){return refs.stream().filter(value->slot.equals(value.getSlotType())).findFirst().map(value->hydrate(value,calls)).orElse(null);}
     private Coordinates firstCoordinate(List<TripPlannerRows.Reference> refs,List<String> slots,CallCounter calls){for(String slot:slots){var value=coordinate(refs,slot,calls);if(value!=null)return value;}return null;}

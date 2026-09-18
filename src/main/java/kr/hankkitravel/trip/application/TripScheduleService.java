@@ -18,8 +18,11 @@ public class TripScheduleService {
     private final TripPlannerMapper plannerMapper;
     private final GuestApplicationService guests;
     private final FamilyProfileApplicationService profiles;
-    public TripScheduleService(TripScheduleMapper mapper, TripPlannerMapper plannerMapper, GuestApplicationService guests, FamilyProfileApplicationService profiles) {
+    private final DayCompletionEvaluator completionEvaluator;
+    public TripScheduleService(TripScheduleMapper mapper, TripPlannerMapper plannerMapper, GuestApplicationService guests, FamilyProfileApplicationService profiles,
+            DayCompletionEvaluator completionEvaluator) {
         this.mapper=mapper; this.plannerMapper=plannerMapper; this.guests=guests; this.profiles=profiles;
+        this.completionEvaluator=completionEvaluator;
     }
     @Transactional
     public TripView create(String guest, TripPlan plan) {
@@ -42,7 +45,8 @@ public class TripScheduleService {
     @Transactional(readOnly=true)
     public List<TripView.Summary> list(String guest) {
         return mapper.list(guestId(guest)).stream().map(t -> new TripView.Summary(t.getPublicId(),t.getRegionKey(),
-                t.getStartDate(),t.getEndDate(),duration(t),t.getProfileId(),t.getMealSlotCount(),t.getSelectedAnchorCount(),t.getCreatedAt())).toList();
+                t.getStartDate(),t.getEndDate(),duration(t),t.getProfileId(),t.getMealSlotCount(),t.getSelectedAnchorCount(),t.getCreatedAt(),
+                dayViews(t).stream().allMatch(day -> day.completion().requiredComplete()))).toList();
     }
     @Transactional(readOnly=true)
     public TripView detail(String guest,String trip) { return view(owned(guest,trip,false)); }
@@ -84,11 +88,18 @@ public class TripScheduleService {
         catch(RuntimeException e) { throw TripProblem.missing(error); }
     }
     private TripView view(TripRows.Schedule trip) {
-        var slots=mapper.slots(trip.getId());
-        var days=mapper.days(trip.getId()).stream().map(d -> new TripView.Day(d.getDayNumber(),d.getTravelDate(),
-                slots.stream().filter(s -> s.getTripDayId().equals(d.getId())).map(s -> new TripView.Slot(s.getPublicId(),s.getMealType(),
-                        s.getContentId()==null?null:new TripView.Anchor(s.getProvider(),s.getContentId(),s.getContentType()))).toList())).toList();
+        var days=dayViews(trip);
         return new TripView(trip.getPublicId(),trip.getProfileId(),trip.getRegionKey(),trip.getStartDate(),trip.getEndDate(),duration(trip),days);
+    }
+    private List<TripView.Day> dayViews(TripRows.Schedule trip) {
+        var slots=mapper.slots(trip.getId());
+        return mapper.days(trip.getId()).stream().map(d -> {
+            var daySlots=slots.stream().filter(s -> s.getTripDayId().equals(d.getId())).toList();
+            var context=new TripPlaceScheduleService.DayContext(trip.getId(),d.getId(),trip.getPublicId(),trip.getProfileId(),trip.getRegionKey(),trip.getStartDate(),trip.getEndDate(),d.getDayNumber(),d.getTravelDate());
+            var refs=new TripPlaceScheduleService.DayReferences(context,List.copyOf(plannerMapper.mealReferences(d.getId())),List.copyOf(plannerMapper.placeReferences(d.getId())),daySlots.stream().map(TripRows.Slot::getMealType).toList());
+            return new TripView.Day(d.getDayNumber(),d.getTravelDate(),daySlots.stream().map(s -> new TripView.Slot(s.getPublicId(),s.getMealType(),
+                    s.getContentId()==null?null:new TripView.Anchor(s.getProvider(),s.getContentId(),s.getContentType()))).toList(),completionEvaluator.evaluate(refs));
+        }).toList();
     }
     private int duration(TripRows.Schedule trip) { return (int)ChronoUnit.DAYS.between(trip.getStartDate(),trip.getEndDate())+1; }
     public record SlotContext(long profileId,String regionKey,java.time.LocalDate travelDate,String mealType,int dayNumber) { }

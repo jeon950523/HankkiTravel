@@ -23,11 +23,14 @@ public class TripPlannerService {
     private final TourismRealtimeGateway tourism; private final TransitRouteFinder transit;
     private final RouteAwareAttractionRecommendationService routeAwareAttractions;
     private final RouteSanityEvaluator routeSanity;
+    private final DayRecommendationOriginService contexts;
+    private final DayCompletionEvaluator completionEvaluator;
     private final int listSize; private final int detailLimit;
     private final int dayModerateMinutes; private final int dayHighMinutes;
     private final List<Integer> stayRadiusLevels; private final int stayMinimumCandidates; private final int stayFarDistanceMeters;
     public TripPlannerService(TripPlaceScheduleService schedules,FamilyProfileApplicationService profiles,
             TourismRealtimeGateway tourism,TransitRouteFinder transit,RouteAwareAttractionRecommendationService routeAwareAttractions,RouteSanityEvaluator routeSanity,
+            DayRecommendationOriginService contexts,DayCompletionEvaluator completionEvaluator,
             @Value("${hankki.planner.list-size:15}")int listSize,@Value("${hankki.planner.detail-limit:6}")int detailLimit,
             @Value("${hankki.planner.stay.radius-levels-meters:3000,8000,15000}")String stayRadiusLevels,
             @Value("${hankki.planner.stay.minimum-candidates:3}")int stayMinimumCandidates,
@@ -36,7 +39,7 @@ public class TripPlannerService {
             @Value("${hankki.planner.attraction.day-burden.high-transit-minutes:180}")int dayHighMinutes){
         if(listSize<1||listSize>30||detailLimit<1||detailLimit>listSize||stayMinimumCandidates<1||stayFarDistanceMeters<1
                 ||dayModerateMinutes<1||dayHighMinutes<=dayModerateMinutes)throw new IllegalArgumentException("플래너 호출 제한 설정이 올바르지 않습니다.");
-        this.schedules=schedules;this.profiles=profiles;this.tourism=tourism;this.transit=transit;this.routeAwareAttractions=routeAwareAttractions;this.routeSanity=routeSanity;this.listSize=listSize;this.detailLimit=detailLimit;
+        this.schedules=schedules;this.profiles=profiles;this.tourism=tourism;this.transit=transit;this.routeAwareAttractions=routeAwareAttractions;this.routeSanity=routeSanity;this.contexts=contexts;this.completionEvaluator=completionEvaluator;this.listSize=listSize;this.detailLimit=detailLimit;
         this.stayRadiusLevels=parseRadii(stayRadiusLevels);this.stayMinimumCandidates=stayMinimumCandidates;this.stayFarDistanceMeters=stayFarDistanceMeters;
         this.dayModerateMinutes=dayModerateMinutes;this.dayHighMinutes=dayHighMinutes;
     }
@@ -68,14 +71,30 @@ public class TripPlannerService {
         if(slot==TripPlannerView.SlotType.STAY)return stayCandidates(guest,trip,day,keyword.trim(),Set.of());
         return recommend(guest,trip,day,slot,TourismContentType.ATTRACTION,keyword.trim(),Set.of());
     }
+    public TripPlannerView.Recommendations otherRestaurants(String guest,String trip,int day,String mealType,Set<String> excluded){
+        return restaurantCandidates(guest,trip,day,mealType,null,safeIds(excluded));
+    }
     public TripPlannerView.Recommendations otherRestaurants(String guest,String trip,int day,Set<String> excluded){
-        return restaurantCandidates(guest,trip,day,null,safeIds(excluded));
+        return otherRestaurants(guest,trip,day,null,excluded);
+    }
+    public TripPlannerView.Recommendations searchRestaurants(String guest,String trip,int day,String mealType,String keyword){
+        if(keyword==null||keyword.isBlank())throw TripProblem.invalid("RESTAURANT_SEARCH_KEYWORD_REQUIRED");
+        return restaurantCandidates(guest,trip,day,mealType,keyword.trim(),Set.of());
     }
     public TripPlannerView.Recommendations searchRestaurants(String guest,String trip,int day,String keyword){
-        if(keyword==null||keyword.isBlank())throw TripProblem.invalid("RESTAURANT_SEARCH_KEYWORD_REQUIRED");
-        return restaurantCandidates(guest,trip,day,keyword.trim(),Set.of());
+        return searchRestaurants(guest,trip,day,null,keyword);
     }
     public TripPlannerView.Recommendations recommendDesserts(String guest,String trip,int day,String mealType){
+        return dessertCandidates(guest,trip,day,mealType,null,Set.of());
+    }
+    public TripPlannerView.Recommendations otherDesserts(String guest,String trip,int day,String mealType,Set<String> excluded){
+        return dessertCandidates(guest,trip,day,mealType,null,safeIds(excluded));
+    }
+    public TripPlannerView.Recommendations searchDesserts(String guest,String trip,int day,String mealType,String keyword){
+        if(keyword==null||keyword.isBlank())throw TripProblem.invalid("DESSERT_SEARCH_KEYWORD_REQUIRED");
+        return dessertCandidates(guest,trip,day,mealType,keyword.trim(),Set.of());
+    }
+    private TripPlannerView.Recommendations dessertCandidates(String guest,String trip,int day,String mealType,String keyword,Set<String> excluded){
         TripPlannerView.SlotType dessertSlot=dessertSlot(mealType);
         long started=System.nanoTime();var refs=schedules.references(guest,trip,day);
         var profile=profiles.owned(guest,refs.context().profileId());
@@ -86,12 +105,13 @@ public class TripPlannerService {
         Coordinates center=tourism.place(meal.getContentId()).coordinates();
         if(center==null)throw TripProblem.invalid("POST_MEAL_DESSERT_LOCATION_REQUIRED");
         var listed=new LinkedHashMap<String,TourismPlace>();int listCalls=0;
-        try{tourism.restaurantsNear(center,2000,0,listSize).items().forEach(value->listed.putIfAbsent(value.contentId(),value));listCalls++;}
-        catch(IntegrationException ignored){listCalls++;}
-        if(listed.isEmpty())for(var region:regions(refs.context().regionKey())){try{tourism.places(region,TourismContentType.RESTAURANT,0,listSize).items()
+        if(keyword==null){try{tourism.restaurantsNear(center,2000,0,listSize).items().forEach(value->listed.putIfAbsent(value.contentId(),value));listCalls++;}
+        catch(IntegrationException ignored){listCalls++;}}
+        if(keyword!=null||listed.isEmpty())for(var region:regions(refs.context().regionKey())){try{(keyword==null?tourism.places(region,TourismContentType.RESTAURANT,0,listSize):tourism.searchPlaces(region,TourismContentType.RESTAURANT,keyword,0,listSize)).items()
                 .forEach(value->listed.putIfAbsent(value.contentId(),value));}catch(IntegrationException ignored){}listCalls++;}
         int details=1;var candidates=new ArrayList<TripPlannerView.Candidate>();
         for(var place:listed.values().stream().filter(value->TourismContentType.RESTAURANT.code().equals(value.contentTypeId()))
+                .filter(value->!excluded.contains(value.contentId()))
                 .filter(value->value.coordinates()!=null).sorted(Comparator.comparingDouble((TourismPlace value)->distanceKm(center,value.coordinates()))
                         .thenComparing(TourismPlace::contentId,TripPlannerService::stableIdCompare)).toList()){
             if(details>detailLimit)break;details++;
@@ -100,7 +120,7 @@ public class TripPlannerService {
                 String distance=distanceLabel(center,place.coordinates());
                 candidates.add(new TripPlannerView.Candidate(place.contentId(),live.detail().contentType(),live.detail().title(),areaLabel(live.detail().address()),
                         live.detail().firstImage(),live.detail().address(),place.coordinates(),"TOUR_API_LIVE",List.of("선택한 식사 장소에서 직선거리 "+distance+"예요."),
-                        List.of("알레르기 재료·교차조리·실제 메뉴는 방문 전 전화로 확인해 주세요.","영업시간과 휴무일은 방문 전에 확인해 주세요."),ATTRIBUTION));
+                        List.of("알레르기 재료·교차조리·실제 메뉴는 방문 전 전화로 확인해 주세요.","영업시간과 휴무일은 방문 전에 확인해 주세요."),ATTRIBUTION,live.detail().telephone()));
             }catch(IntegrationException ignored) { }
         }
         String availability=candidates.isEmpty()?"CURRENT_DATA_PARTIALLY_UNAVAILABLE":"CURRENT_DATA";
@@ -120,12 +140,12 @@ public class TripPlannerService {
         var listed=new ArrayList<TourismPlace>();int listCalls=0;
         for(var region:regions(refs.context().regionKey())){try{var page=keyword==null?tourism.places(region,type,0,listSize):tourism.searchPlaces(region,type,keyword,0,listSize);listed.addAll(page.items());}
             catch(IntegrationException ignored){}listCalls++;}
-        var mealContext=mealAnchor(refs.meals());Coordinates meal=mealContext.coordinates();int details=0;var candidates=new ArrayList<TripPlannerView.Candidate>();
+        var origin=contexts.resolve(refs,slot.name());Coordinates meal=origin.origin();int details=0;var candidates=new ArrayList<TripPlannerView.Candidate>();
         for(var place:listed.stream().filter(p->type.code().equals(p.contentTypeId())).filter(p->inRegion(p,refs.context().regionKey()))
                 .filter(p->p.coordinates()!=null&&!selected.contains(p.contentId())).sorted(Comparator.comparing(TourismPlace::contentId,TripPlannerService::stableIdCompare)).toList()){
             if(details>=detailLimit)break;details++;
             try{var live=tourism.place(place.contentId());if(!valid(live,type,refs.context().regionKey()))continue;
-                var reasons=new ArrayList<String>();if(meal!=null&&live.coordinates()!=null)reasons.add("선택한 식사 장소 기준 직선거리 "+distanceLabel(meal,live.coordinates()));
+                var reasons=new ArrayList<String>();if(meal!=null&&live.coordinates()!=null)reasons.add(DayRecommendationContextResolver.label(origin.originSlot())+"에서 직선거리 "+distanceLabel(meal,live.coordinates()));
                 if(reasons.isEmpty())reasons.add("현재 TourAPI에서 지역과 장소 유형을 확인했습니다.");
                 candidates.add(new TripPlannerView.Candidate(live.contentId(),live.contentType(),live.title(),areaLabel(live.address()),live.firstImage(),live.address(),
                         live.coordinates(),"TOUR_API_LIVE",List.copyOf(reasons),List.of("운영시간과 휴무일은 방문 전에 확인해 주세요."),ATTRIBUTION));
@@ -133,13 +153,14 @@ public class TripPlannerService {
         }
         candidates.sort(Comparator.comparingDouble((TripPlannerView.Candidate c)->meal==null||c.coordinates()==null?Double.MAX_VALUE:distanceKm(meal,c.coordinates()))
                 .thenComparing(TripPlannerView.Candidate::contentId,TripPlannerService::stableIdCompare));
-        return new TripPlannerView.Recommendations(slot.name(),List.copyOf(candidates),new TripPlannerView.CallSummary(listCalls,details+mealContext.calls(),0,elapsed(started)),
+        return new TripPlannerView.Recommendations(slot.name(),List.copyOf(candidates),new TripPlannerView.CallSummary(listCalls,details+origin.detailCalls(),0,elapsed(started)),
                 candidates.isEmpty()?"CURRENT_DATA_PARTIALLY_UNAVAILABLE":"CURRENT_DATA",ATTRIBUTION);
     }
 
-    private TripPlannerView.Recommendations restaurantCandidates(String guest,String trip,int day,String keyword,Set<String> excluded){
+    private TripPlannerView.Recommendations restaurantCandidates(String guest,String trip,int day,String mealType,String keyword,Set<String> excluded){
         long started=System.nanoTime();var refs=schedules.references(guest,trip,day);var profile=profiles.owned(guest,refs.context().profileId());
-        var focus=anchorBySlot(refs,"DAY_FOCUS");Coordinates center=focus.coordinates();
+        String target=mealType!=null&&List.of("BREAKFAST","LUNCH","DINNER").contains(mealType)?mealType:"BREAKFAST";
+        var origin=contexts.resolve(refs,target);Coordinates center=origin.origin();
         var listed=new LinkedHashMap<String,TourismPlace>();int listCalls=0;
         if(keyword==null&&center!=null){try{tourism.restaurantsNear(center,5000,0,listSize).items().forEach(value->listed.putIfAbsent(value.contentId(),value));}
             catch(IntegrationException ignored){}listCalls++;}
@@ -156,22 +177,22 @@ public class TripPlannerService {
             try{var live=tourism.decisionData(place.contentId());
                 if(!List.of("MEAL","MIXED").contains(live.restaurant().classification())||!passesStrictFoodRestrictions(profile,live))continue;
                 Coordinates coordinates=place.coordinates();long distance=distanceMeters(center,coordinates);
-                var reasons=new ArrayList<String>();if(distance>=0)reasons.add("오늘의 중심 장소에서 직선거리 "+distanceLabel(center,coordinates)+"예요.");
+                var reasons=new ArrayList<String>();if(distance>=0)reasons.add(DayRecommendationContextResolver.label(origin.originSlot())+"에서 직선거리 "+distanceLabel(center,coordinates)+"예요.");
                 else reasons.add("현재 TourAPI에서 식당 유형과 지역을 확인했습니다.");
                 candidates.add(candidate(live.detail().contentId(),live.detail().contentType(),live.detail().title(),live.detail().firstImage(),
-                        live.detail().address(),coordinates,reasons,List.of("메뉴·알레르기 재료·교차조리는 방문 전 확인해 주세요."),distance));
+                        live.detail().address(),coordinates,reasons,List.of("메뉴·알레르기 재료·교차조리는 방문 전 확인해 주세요."),distance,live.detail().telephone()));
             }catch(IntegrationException ignored){}
         }
         return new TripPlannerView.Recommendations("RESTAURANT",List.copyOf(candidates),
-                new TripPlannerView.CallSummary(listCalls,details+focus.calls(),0,elapsed(started)),
+                new TripPlannerView.CallSummary(listCalls,details+origin.detailCalls(),0,elapsed(started)),
                 candidates.isEmpty()?"CURRENT_DATA_PARTIALLY_UNAVAILABLE":"CURRENT_DATA",ATTRIBUTION,List.of(),
-                center==null?"REGION":"DAY_FOCUS");
+                center==null?"REGION":origin.originSlot());
     }
 
     private TripPlannerView.Recommendations stayCandidates(String guest,String trip,int day,String keyword,Set<String> excluded){
         long started=System.nanoTime();var refs=schedules.references(guest,trip,day);profiles.owned(guest,refs.context().profileId());
         if(refs.context().lastDay())throw TripProblem.invalid("STAY_NOT_REQUIRED");
-        var anchor=lastRouteAnchor(refs);Coordinates center=anchor.coordinates();
+        var anchor=contexts.resolve(refs,"STAY");Coordinates center=anchor.origin();
         var nextFocus=anchorBySlot(schedules.references(guest,trip,day+1),"DAY_FOCUS");
         var unique=new LinkedHashMap<String,TourismPlace>();int listCalls=0;int radiusUsed=0;
         if(keyword!=null){for(var region:regions(refs.context().regionKey())){try{var page=tourism.searchPlaces(region,TourismContentType.LODGING,keyword,0,listSize);page.items().forEach(value->unique.putIfAbsent(value.contentId(),value));}
@@ -193,16 +214,16 @@ public class TripPlannerService {
         }
         hydrated.sort(Comparator.comparingLong(StayCandidate::score).thenComparing(value->value.place().contentId(),TripPlannerService::stableIdCompare));
         var candidates=hydrated.stream().map(value->{var reasons=new ArrayList<String>();
-            if(value.currentDistance()>=0)reasons.add(anchor.slotType()+"에서 직선거리 "+distanceLabelMeters(value.currentDistance())+"예요.");
+            if(value.currentDistance()>=0)reasons.add(DayRecommendationContextResolver.label(anchor.originSlot())+"에서 직선거리 "+distanceLabelMeters(value.currentDistance())+"예요.");
             if(value.nextDistance()>=0)reasons.add("다음 날 중심 장소까지 직선거리 "+distanceLabelMeters(value.nextDistance())+"예요.");
             if(reasons.isEmpty())reasons.add("현재 TourAPI에서 숙박 유형과 지역을 확인했습니다.");
             var cautions=new ArrayList<String>();if(value.currentDistance()>stayFarDistanceMeters)cautions.add("현재 일정에서 거리가 먼 편이에요.");
             cautions.add("실시간 객실·가격·예약 가능 여부는 숙소에서 확인해 주세요.");
             return candidate(value.place().contentId(),value.place().contentType(),value.place().title(),value.place().firstImage(),
                     value.place().address(),value.place().coordinates(),reasons,cautions,value.currentDistance());}).toList();
-        String context=(center==null?"REGION":anchor.slotType())+";radius="+radiusUsed+";candidateCount="+candidates.size();
+        String context=(center==null?"REGION":anchor.originSlot())+";radius="+radiusUsed+";candidateCount="+candidates.size();
         return new TripPlannerView.Recommendations(TripPlannerView.SlotType.STAY.name(),candidates,
-                new TripPlannerView.CallSummary(listCalls,details+anchor.calls()+nextFocus.calls(),0,elapsed(started)),
+                new TripPlannerView.CallSummary(listCalls,details+anchor.detailCalls()+nextFocus.calls(),0,elapsed(started)),
                 candidates.isEmpty()?"CURRENT_DATA_PARTIALLY_UNAVAILABLE":"CURRENT_DATA",ATTRIBUTION,List.of(),context);
     }
     public TripPlannerView.Reference select(String guest,String trip,int day,TripPlannerView.SlotType slot,String contentId){
@@ -252,7 +273,7 @@ public class TripPlannerService {
         try{sanity=routeSanity.evaluate(List.copyOf(legs));}catch(RuntimeException ignored){sanity=new RouteSanityEvaluator.Result(List.copyOf(legs),
                 new TripPlannerView.RouteSanity("NOT_EVALUATED","NOT_EVALUATED",0,0,legs.size(),null,null,null,0,0,List.of(),List.of()));}
         return new TripPlannerView.Planner(refs.context().tripPublicId(),day,refs.context().travelDate(),List.copyOf(items),sanity.legs(),
-                new TripPlannerView.CallSummary(0,detailCalls,transitCalls,elapsed(started)),dayBurden(items,sanity.legs(),profile.transportMode()),sanity.summary());
+                new TripPlannerView.CallSummary(0,detailCalls,transitCalls,elapsed(started)),dayBurden(items,sanity.legs(),profile.transportMode()),sanity.summary(),completionEvaluator.evaluate(refs));
     }
     private TripPlannerView.DayBurden dayBurden(List<TripPlannerView.Item> items,List<TripPlannerView.Leg> legs,String mode){
         if(!"PUBLIC_TRANSIT".equals(mode))return new TripPlannerView.DayBurden("NOT_EVALUATED","NOT_EVALUATED",items.size(),null,0,0,
@@ -283,8 +304,12 @@ public class TripPlannerService {
     private String distanceLabelMeters(long meters){return meters<1000?meters+"m":String.format(Locale.ROOT,"%.1fkm",meters/1000.0);}
     private TripPlannerView.Candidate candidate(String contentId,String contentType,String title,String image,String address,
             Coordinates coordinates,List<String> reasons,List<String> cautions,long distanceMeters){
+        return candidate(contentId,contentType,title,image,address,coordinates,reasons,cautions,distanceMeters,null);
+    }
+    private TripPlannerView.Candidate candidate(String contentId,String contentType,String title,String image,String address,
+            Coordinates coordinates,List<String> reasons,List<String> cautions,long distanceMeters,String telephone){
         return new TripPlannerView.Candidate(contentId,contentType,title,areaLabel(address),image,address,coordinates,"TOUR_API_LIVE",
-                reasons,cautions,ATTRIBUTION,null,0,0,null,distanceMeters<0?null:distanceMeters,null,List.of(),reasons,cautions);
+                reasons,cautions,ATTRIBUTION,null,0,0,null,distanceMeters<0?null:distanceMeters,null,List.of(),reasons,cautions,telephone);
     }
     private AnchorContext anchorBySlot(TripPlaceScheduleService.DayReferences refs,String slot){
         var reference=refs.places().stream().filter(value->slot.equals(value.getSlotType())).findFirst().orElse(null);

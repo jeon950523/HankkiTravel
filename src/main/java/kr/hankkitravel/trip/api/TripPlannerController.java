@@ -35,13 +35,19 @@ public class TripPlannerController {
             @PathVariable int dayNumber,@RequestParam TripPlannerView.SlotType slotType,@RequestParam String keyword){return response(200,planner.searchPlaces(guestPublicId,tripPublicId,dayNumber,slotType,keyword));}
     @PostMapping("/restaurant-alternatives")
     public ResponseEntity<TripPlannerView.Recommendations> restaurantAlternatives(@PathVariable String guestPublicId,@PathVariable String tripPublicId,
-            @PathVariable int dayNumber,@RequestBody(required=false) ExcludeRequest request){return response(200,planner.otherRestaurants(guestPublicId,tripPublicId,dayNumber,ids(request==null?null:request.exclude())));}
+            @PathVariable int dayNumber,@RequestParam(required=false) String mealType,@RequestBody(required=false) ExcludeRequest request){return response(200,planner.otherRestaurants(guestPublicId,tripPublicId,dayNumber,mealType,ids(request==null?null:request.exclude())));}
     @GetMapping("/restaurant-search")
     public ResponseEntity<TripPlannerView.Recommendations> restaurantSearch(@PathVariable String guestPublicId,@PathVariable String tripPublicId,
-            @PathVariable int dayNumber,@RequestParam String keyword){return response(200,planner.searchRestaurants(guestPublicId,tripPublicId,dayNumber,keyword));}
+            @PathVariable int dayNumber,@RequestParam(required=false) String mealType,@RequestParam String keyword){return response(200,planner.searchRestaurants(guestPublicId,tripPublicId,dayNumber,mealType,keyword));}
     @PostMapping("/dessert-recommendations")
     public ResponseEntity<TripPlannerView.Recommendations> desserts(@PathVariable String guestPublicId,@PathVariable String tripPublicId,@PathVariable int dayNumber,
             @RequestParam String mealType){return response(200,planner.recommendDesserts(guestPublicId,tripPublicId,dayNumber,mealType));}
+    @PostMapping("/dessert-alternatives")
+    public ResponseEntity<TripPlannerView.Recommendations> dessertAlternatives(@PathVariable String guestPublicId,@PathVariable String tripPublicId,@PathVariable int dayNumber,
+            @RequestParam String mealType,@RequestBody(required=false) ExcludeRequest request){return response(200,planner.otherDesserts(guestPublicId,tripPublicId,dayNumber,mealType,ids(request==null?null:request.exclude())));}
+    @GetMapping("/dessert-search")
+    public ResponseEntity<TripPlannerView.Recommendations> dessertSearch(@PathVariable String guestPublicId,@PathVariable String tripPublicId,@PathVariable int dayNumber,
+            @RequestParam String mealType,@RequestParam String keyword){return response(200,planner.searchDesserts(guestPublicId,tripPublicId,dayNumber,mealType,keyword));}
     @PutMapping("/place-anchors/{slotType}")
     public ResponseEntity<TripPlannerView.Reference> select(@PathVariable String guestPublicId,@PathVariable String tripPublicId,@PathVariable int dayNumber,
             @PathVariable TripPlannerView.SlotType slotType,@RequestBody AnchorRequest request){return response(200,planner.select(guestPublicId,tripPublicId,dayNumber,slotType,request.contentId()));}

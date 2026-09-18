@@ -25,7 +25,7 @@ public class TripPlaceScheduleService {
     }
     @Transactional
     public void clear(String guest,String trip,int day,TripPlannerView.SlotType type){var c=owned(guest,trip,day,true);mapper.clear(c.getDayId(),type.name());}
-    private DayReferences refs(TripPlannerRows.Context c){return new DayReferences(convert(c),List.copyOf(mapper.mealReferences(c.getDayId())),List.copyOf(mapper.placeReferences(c.getDayId())));}
+    private DayReferences refs(TripPlannerRows.Context c){return new DayReferences(convert(c),List.copyOf(mapper.mealReferences(c.getDayId())),List.copyOf(mapper.placeReferences(c.getDayId())),List.copyOf(mapper.mealSlotTypes(c.getDayId())));}
     private TripPlannerRows.Context owned(String guest,String trip,int day,boolean lock){
         if(day<1||day>4)throw TripProblem.missing("TRIP_DAY_NOT_FOUND");
         try{if(!UUID.fromString(trip).toString().equalsIgnoreCase(trip))throw new IllegalArgumentException();}catch(RuntimeException e){throw TripProblem.missing("TRIP_NOT_FOUND");}
@@ -48,6 +48,10 @@ public class TripPlaceScheduleService {
     private DayContext convert(TripPlannerRows.Context c){return new DayContext(c.getTripId(),c.getDayId(),c.getTripPublicId(),c.getProfileId(),c.getRegionKey(),c.getStartDate(),c.getEndDate(),c.getDayNumber(),c.getTravelDate());}
     public record DayContext(long tripId,long dayId,String tripPublicId,long profileId,String regionKey,java.time.LocalDate startDate,
             java.time.LocalDate endDate,int dayNumber,java.time.LocalDate travelDate){public boolean lastDay(){return !travelDate.isBefore(endDate);}}
-    public record DayReferences(DayContext context,List<TripPlannerRows.Reference> meals,List<TripPlannerRows.Reference> places){}
+    public record DayReferences(DayContext context,List<TripPlannerRows.Reference> meals,List<TripPlannerRows.Reference> places,List<String> requiredMealTypes){
+        public DayReferences(DayContext context,List<TripPlannerRows.Reference> meals,List<TripPlannerRows.Reference> places){
+            this(context,meals,places,meals.stream().map(TripPlannerRows.Reference::getSlotType).toList());
+        }
+    }
     public record ValidatedPlace(String contentId,String contentType){}
 }
