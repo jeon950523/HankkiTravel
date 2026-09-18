@@ -57,7 +57,10 @@ public final class TripPlannerView {
     public record DayBurden(String state,String level,int selectedPlaceCount,BigDecimal transitMinutes,
             long explicitWalkingDistanceMeters,int transferCount,String caution) { }
     public record Item(String slotType,String provider,String contentId,String contentType,String title,String address,
-            String imageUrl,Coordinates coordinates,String sourceAttribution,String dataAvailability,String telephone) { }
+            String imageUrl,Coordinates coordinates,String sourceAttribution,String dataAvailability,String telephone,
+            List<String> menuSummary) {
+        public Item { menuSummary=menuSummary==null?List.of():List.copyOf(menuSummary); }
+    }
     public record Leg(String fromSlotType,String toSlotType,String mode,BigDecimal durationMinutes,int transferCount,
             long explicitWalkingDistanceMeters,long unaccountedDistanceMeters,Long straightDistanceMeters,
             String dataAvailability,String kakaoMapLandingUrl,String burdenSeverity,List<String> burdenReasons) {

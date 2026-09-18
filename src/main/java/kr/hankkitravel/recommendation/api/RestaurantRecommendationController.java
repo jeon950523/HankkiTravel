@@ -92,7 +92,8 @@ public class RestaurantRecommendationController {
             kr.hankkitravel.shared.geo.Coordinates coordinates, String imageUrl, int compatibilityScore, int overallScore,
             int evaluatedWeight, int evidenceCoverage, String informationEvidence, String phone, String placeUrl,
             String contactEvidence, List<String> ourFamilyFitReasons,
-            List<String> ourFamilyCautions, List<String> checkBeforeVisit, List<NutritionResponse> nutritionEvidence,
+            List<String> ourFamilyCautions, List<String> checkBeforeVisit, List<String> menuSummary,
+            List<NutritionResponse> nutritionEvidence,
             Long distanceMeters, TransportResponse transportEvidence, String routeDataAvailability,
             List<DimensionResponse> evaluatedDimensions) {
         static RestaurantResponse from(RecommendationCore.RankedCandidate item) {
@@ -104,6 +105,8 @@ public class RestaurantRecommendationController {
                     item.evaluatedWeight(),item.evidenceCoverage(),candidate.informationEvidence().name(),restaurant.phone(),
                     restaurant.placeUrl(),restaurant.contactEvidence(),
                     candidate.positives(), candidate.cautions(), candidate.checks(), restaurant.menus().stream()
+                    .map(RecommendationCore.MenuEvidence::rawName).filter(value->value!=null&&!value.isBlank())
+                    .distinct().limit(3).toList(), restaurant.menus().stream()
                     .filter(MenuEvidenceView::displayable).map(MenuEvidenceView::from).toList(),
                     distanceMeters(restaurant.distanceFromAnchorKm()), transit == null ? null
                     : new TransportResponse(transit.totalTimeMinutes(), transit.transferCount(), transit.explicitWalkingDistanceMeters(),

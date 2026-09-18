@@ -258,11 +258,13 @@ public class TripPlannerService {
         for(var ref:all){if(!rendered.add(ref.getContentId()))continue;detailCalls++;try{var live=tourism.place(ref.getContentId());
             boolean identity=ref.getContentId().equals(live.contentId())&&ref.getContentType().equals(live.contentType())&&inRegion(live,refs.context().regionKey());
             if(!identity){items.add(unavailable(ref));continue;}
-            String telephone=null;
-            if(TourismContentType.RESTAURANT.code().equals(ref.getContentType()))try{telephone=tourism.decisionData(ref.getContentId()).detail().telephone();detailCalls++;}
+            String telephone=null;List<String> menuSummary=List.of();
+            if(TourismContentType.RESTAURANT.code().equals(ref.getContentType()))try{var decision=tourism.decisionData(ref.getContentId());
+                telephone=decision.detail().telephone();menuSummary=decision.restaurant().menuCandidates().stream()
+                        .map(value->value.rawMenuName()).filter(value->value!=null&&!value.isBlank()).distinct().limit(3).toList();detailCalls++;}
             catch(RuntimeException ignored){}
             items.add(new TripPlannerView.Item(ref.getSlotType(),ref.getProvider(),ref.getContentId(),ref.getContentType(),live.title(),live.address(),
-                    live.firstImage(),live.coordinates(),ATTRIBUTION,"CURRENT_DATA",telephone));
+                    live.firstImage(),live.coordinates(),ATTRIBUTION,"CURRENT_DATA",telephone,menuSummary));
         }catch(IntegrationException|IllegalArgumentException e){items.add(unavailable(ref));}}
         var legs=new ArrayList<TripPlannerView.Leg>();int transitCalls=0;
         for(int i=1;i<items.size();i++){
@@ -298,7 +300,7 @@ public class TripPlannerService {
         return new TripPlannerView.DayBurden(current.size()==legs.size()?"EVALUATED":"PARTIAL",level,items.size(),minutes,walking,transfers,caution);
     }
     private AnchorContext mealAnchor(List<TripPlannerRows.Reference> meals){int calls=0;for(var r:meals)try{calls++;var live=tourism.place(r.getContentId());if(live.coordinates()!=null)return new AnchorContext(live.coordinates(),calls);}catch(RuntimeException ignored){}return new AnchorContext(null,calls);}
-    private TripPlannerView.Item unavailable(TripPlannerRows.Reference r){return new TripPlannerView.Item(r.getSlotType(),r.getProvider(),r.getContentId(),r.getContentType(),null,null,null,null,ATTRIBUTION,"CURRENT_DATA_UNAVAILABLE",null);}
+    private TripPlannerView.Item unavailable(TripPlannerRows.Reference r){return new TripPlannerView.Item(r.getSlotType(),r.getProvider(),r.getContentId(),r.getContentType(),null,null,null,null,ATTRIBUTION,"CURRENT_DATA_UNAVAILABLE",null,List.of());}
     private TripPlannerView.Leg unavailableLeg(TripPlannerView.Item a,TripPlannerView.Item b,String mode){return new TripPlannerView.Leg(a.slotType(),b.slotType(),mode,null,0,0,0,null,"UNAVAILABLE",null,"NOT_EVALUATED",List.of());}
     private boolean valid(TourismLivePlace p,TourismContentType t,String region){return p!=null&&t.code().equals(p.contentType())&&inRegion(p,region);}
     private static boolean inRegion(TourismLivePlace p,String region){return regionMatches(p.regionCode(),p.districtCode(),region);}

@@ -42,4 +42,20 @@ class RestaurantRecommendationControllerTest {
         assertThat(response.routeDataAvailability()).isEqualTo("CURRENT_DATA");
         assertThat(response.transportEvidence().explicitWalkingDistanceMeters()).isEqualTo(180);
     }
+
+    @Test
+    void exposesLiveMenuSummaryEvenWhenNutritionReferenceIsUnavailable() {
+        var menu = new RecommendationCore.MenuEvidence("갈치조림", "NONE", null, null, null, null, "NOT_MATCHED");
+        var restaurant = new RecommendationCore.Candidate("1", "식당", "제주", "제주시", null, null,
+                List.of(menu), null, new Coordinates(new BigDecimal("126.5"), new BigDecimal("33.5")),
+                new BigDecimal("1.234"), null, null, "UNAVAILABLE", null);
+        var scored = new RecommendationCore.ScoredCandidate(restaurant, Map.of(),
+                RecommendationCore.InformationEvidence.REFERENCE, List.of(), List.of(), List.of());
+
+        var response = RestaurantRecommendationController.RestaurantResponse.from(
+                new RecommendationCore.RankedCandidate(scored, RecommendationCore.Perspective.BALANCED, 74, 30, 30));
+
+        assertThat(response.menuSummary()).containsExactly("갈치조림");
+        assertThat(response.nutritionEvidence()).isEmpty();
+    }
 }
