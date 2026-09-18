@@ -430,6 +430,9 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 .final-plan-header > .action-button { grid-column: 1 / -1; justify-self: start; }
 .final-plan-day .planner-layout { margin-top: 8px; }
 .final-plan-leg { cursor: default; }
+.final-result-card .contact-actions { margin-top: 12px; }
+.final-result-card .contact-actions .action-button { min-height: 40px; padding: 8px 12px; }
+.final-movement-evidence { margin: 8px 0 0; color: var(--color-secondary); line-height: 1.65; }
 @media (max-width: 768px) {
   .final-plan-header,.compact-live-card { grid-template-columns: 1fr; }
   .next-decision-primary .action-button,.day-complete-card .action-button { width: 100%; }

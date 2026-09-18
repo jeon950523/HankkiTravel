@@ -38,6 +38,7 @@ async function mockGoldenApi(page, { map = true } = {}) {
     if (pathname === `/api/guests/${guestId}/trips` && request.method() === 'POST') return json({ tripPublicId: tripId, profileId: 42, regionKey: 'JEJU', startDate: '2026-09-16', endDate: '2026-09-16', durationDays: 1, days: [{ dayNumber: 1, travelDate: '2026-09-16', mealSlots: [{ mealSlotPublicId: slotId, mealType: 'LUNCH', anchor: null }] }] }, 201)
     if (pathname === `/api/guests/${guestId}/trips/${tripId}` && request.method() === 'GET') return json({ tripPublicId: tripId, profileId: 42, regionKey: 'JEJU', startDate: '2026-09-16', endDate: '2026-09-16', durationDays: 1, days: [{ dayNumber: 1, travelDate: '2026-09-16', mealSlots: [{ mealSlotPublicId: slotId, mealType: 'LUNCH', anchor: anchored ? { provider: 'KTO', contentId: '123', contentType: '39' } : null }] }] })
     if (pathname.endsWith(`/meal-slots/${slotId}/recommendations`) && request.method() === 'POST') return json(recommendation)
+    if (pathname.endsWith('/days/1/dessert-recommendations') && request.method() === 'POST') return json({ slotType: 'POST_LUNCH_DESSERT', candidates: [], dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사', recommendationContext: { originSlotType: 'LUNCH', originTitle: '현재 식당', originSource: 'CHRONOLOGICAL_ANCHOR' } })
     if (pathname.endsWith('/days/1/focus-recommendations') && request.method() === 'POST') return json({ slotType: 'DAY_FOCUS', candidates: [place], dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사' })
     if (pathname.endsWith('/days/1/place-anchors/DAY_FOCUS') && request.method() === 'PUT') { focused = true; return json({ publicId: 'focus-ref', slotType: 'DAY_FOCUS', provider: 'KTO', contentId: '456', contentType: '12' }) }
     if (pathname.endsWith(`/meal-slots/${slotId}/anchor`) && request.method() === 'PUT') { anchored = true; return json({ provider: 'KTO', contentId: '123', contentType: '39' }) }
@@ -46,7 +47,7 @@ async function mockGoldenApi(page, { map = true } = {}) {
     if (pathname.endsWith('/days/1/planner') && request.method() === 'GET') {
       const items = []
       if (focused) items.push({ slotType: 'DAY_FOCUS', provider: 'KTO', contentId: '456', contentType: '12', title: '현재 관광지', address: '제주시 여행로', imageUrl: null, coordinates: { longitude: 126.5, latitude: 33.5 }, sourceAttribution: '출처: ⓒ한국관광공사', dataAvailability: 'CURRENT_DATA' })
-      if (anchored) items.push({ slotType: 'LUNCH', provider: 'KTO', contentId: '123', contentType: '39', title: '현재 식당', address: '제주시 현재로', imageUrl: null, coordinates: { longitude: 126.53, latitude: 33.49 }, sourceAttribution: '출처: ⓒ한국관광공사', dataAvailability: 'CURRENT_DATA' })
+      if (anchored) items.push({ slotType: 'LUNCH', provider: 'KTO', contentId: '123', contentType: '39', title: '현재 식당', address: '제주시 현재로', imageUrl: null, coordinates: { longitude: 126.53, latitude: 33.49 }, sourceAttribution: '출처: ⓒ한국관광공사', dataAvailability: 'CURRENT_DATA', telephone: '064-123-4567' })
       const legs = items.length > 1 ? [{ fromSlotType: 'DAY_FOCUS', toSlotType: 'LUNCH', mode: 'PUBLIC_TRANSIT', durationMinutes: 195, transferCount: 3, explicitWalkingDistanceMeters: 180, unaccountedDistanceMeters: 0, dataAvailability: 'CURRENT_DATA', burdenSeverity: 'HIGH', burdenReasons: ['대중교통 이동 시간이 매우 긴 구간이에요.'] }] : []
       const routeSanity = legs.length ? { state: 'EVALUATED', severity: 'HIGH', evidenceCoverage: 100, evaluatedLegCount: 1, totalLegCount: 1, longestLeg: { legIndex: 0, fromSlotType: 'DAY_FOCUS', toSlotType: 'LUNCH', mode: 'PUBLIC_TRANSIT', durationMinutes: 195, straightDistanceMeters: null, severity: 'HIGH' }, totalTransitMinutes: 195, totalStraightDistanceMeters: null, totalTransfers: 3, totalExplicitWalkingDistanceMeters: 180, reasons: ['확인 가능한 이동 구간 중 긴 이동이 1개 있어요.'], suggestedActions: ['NEAR_RESTAURANT', 'KEEP_ITINERARY'] } : { state: 'NOT_EVALUATED', severity: 'NOT_EVALUATED', evidenceCoverage: 0, evaluatedLegCount: 0, totalLegCount: 0, longestLeg: null, reasons: [], suggestedActions: [] }
       return json({ tripPublicId: tripId, dayNumber: 1, travelDate: '2026-09-16', items, legs, routeSanity })
@@ -217,8 +218,48 @@ test('완료된 여행의 Final Plan은 결과만 보이고 수정은 Journey로
   await expect(page.getByRole('heading', { name: /나의 제주 0박 1일 여행 플랜/ })).toBeVisible()
   await expect(page.getByText('현재 관광지')).toBeVisible()
   await expect(page.getByText('현재 식당')).toBeVisible()
+  await expect(page.getByText('이 Day의 첫 장소예요.')).toBeVisible()
+  await expect(page.getByText(/이전 장소에서 대중교통 약 195분/)).toBeVisible()
+  await expect(page.getByRole('link', { name: '전화하기' })).toHaveAttribute('href', 'tel:0641234567')
+  const kakaoSearch = page.getByRole('link', { name: '카카오맵에서 검색' }).last()
+  await expect(kakaoSearch).toHaveAttribute('href', /https:\/\/map\.kakao\.com\/link\/search\//)
+  await expect(kakaoSearch).toHaveAttribute('target', '_blank')
+  await expect(kakaoSearch).toHaveAttribute('rel', 'noopener noreferrer')
   await expect(page.getByText(/추천 식당 보기|다른 식당 보기|직접 찾기|선택 해제/)).toHaveCount(0)
   await page.getByRole('link', { name: '여행 수정하기' }).click()
+  await expect(page).toHaveURL(new RegExp(`/travel/${tripId}$`))
+})
+
+test('선택형 디저트를 건너뛰면 compact 상태로 접고 다시 추가할 수 있다', async ({ page }) => {
+  await mockGoldenApi(page)
+  await createDayTrip(page)
+  await selectDayFocus(page)
+  await page.getByRole('button', { name: '점심 TOP3 보기' }).click()
+  await page.getByRole('button', { name: '이 식당 선택' }).click()
+
+  const dessertSection = page.getByRole('region', { name: '식후 디저트' })
+  await dessertSection.getByRole('button', { name: '건너뛰기' }).click()
+  await expect(dessertSection.getByText('점심 후 디저트 · 건너뜀')).toBeVisible()
+  await expect(dessertSection.getByRole('button', { name: '추가하기' })).toBeVisible()
+  await expect(dessertSection.getByRole('button', { name: '디저트 추천 보기' })).toHaveCount(0)
+
+  await dessertSection.getByRole('button', { name: '추가하기' }).click()
+  await expect(dessertSection.getByRole('heading', { name: '식후에 잠깐 쉬어갈까요?' })).toBeFocused()
+  await expect(dessertSection.getByRole('button', { name: '디저트 추천 보기' })).toBeVisible()
+})
+
+test('디저트 후보가 없으면 인코딩된 Kakao 외부 검색으로 안전하게 연결한다', async ({ page }) => {
+  await mockGoldenApi(page)
+  await createDayTrip(page)
+  await selectDayFocus(page)
+  await page.getByRole('button', { name: '점심 TOP3 보기' }).click()
+  await page.getByRole('button', { name: '이 식당 선택' }).click()
+  await page.getByRole('button', { name: '디저트 추천 보기' }).click()
+
+  const fallback = page.getByRole('link', { name: '카카오맵에서 주변 디저트 찾아보기' })
+  await expect(fallback).toHaveAttribute('href', /https:\/\/map\.kakao\.com\/link\/search\/%ED%98%84%EC%9E%AC%20%EC%8B%9D%EB%8B%B9/)
+  await expect(fallback).toHaveAttribute('target', '_blank')
+  await expect(fallback).toHaveAttribute('rel', 'noopener noreferrer')
   await expect(page).toHaveURL(new RegExp(`/travel/${tripId}$`))
 })
 

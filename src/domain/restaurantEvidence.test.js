@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { restaurantExternalActions, restaurantMovementEvidence } from './restaurantEvidence'
+import { kakaoSearchUrl, restaurantExternalActions, restaurantMovementEvidence } from './restaurantEvidence'
 
 describe('식당 외부 확인 CTA', () => {
+  it('strict match가 없으면 Kakao link/search 계약과 URL 인코딩을 지킨다', () => {
+    const url = kakaoSearchUrl({ title: '한끼 국수', address: '제주시 애월읍 1-1' })
+    expect(url).toBe('https://map.kakao.com/link/search/%ED%95%9C%EB%81%BC%20%EA%B5%AD%EC%88%98%20%EC%A0%9C%EC%A3%BC%EC%8B%9C%20%EC%95%A0%EC%9B%94%EC%9D%8D%201-1')
+    expect(url).not.toContain('?q=')
+  })
+
   it.each([
     [{ phone: null, placeUrl: 'https://place.map.kakao.com/1' }, ['지도·후기 보기']],
     [{ phone: '064-123-4567', placeUrl: 'https://place.map.kakao.com/1' }, ['전화하기', '지도·후기 보기']],

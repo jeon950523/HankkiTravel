@@ -7,6 +7,7 @@ import StatusMessage from '../components/StatusMessage.vue'
 import { buildPlannerDisplayItems, buildPlannerLegs } from '../domain/plannerMap'
 import { SLOT_LABELS, showStayForDay, transitSummary } from '../domain/trip'
 import { evaluateDayCompletion } from '../domain/progressivePlanner'
+import { restaurantExternalActions } from '../domain/restaurantEvidence'
 import { routeSanityLabel, routeSanitySummary } from '../domain/routeSanity'
 import { useGuestStore } from '../stores/guest'
 import { useProfilesStore } from '../stores/profiles'
@@ -48,6 +49,13 @@ const tripDays = computed(() => (trips.detail?.days || []).map(day => {
   }
 }))
 const tripComplete = computed(() => tripDays.value.length > 0 && tripDays.value.every(day => day.completion.isRequiredComplete))
+const finalMovementEvidence = (day, index) => index === 0
+  ? '이 Day의 첫 장소예요.'
+  : `이전 장소에서 ${transitSummary(day.displayLegs[index - 1])}`
+const finalActions = item => restaurantExternalActions({
+  ...item,
+  phone: item.telephone,
+})
 
 onMounted(async () => {
   try {
@@ -79,7 +87,7 @@ onMounted(async () => {
         <div class="planner-heading"><div><p class="eyebrow">{{ formatDate(day.travelDate) }}</p><h2 :id="`final-day-${day.dayNumber}`">DAY {{ day.dayNumber }}</h2></div><RouterLink class="text-button" :to="`/travel/${tripId}?day=${day.dayNumber}`">DAY {{ day.dayNumber }} 수정</RouterLink></div>
         <StatusMessage v-if="day.loadError" kind="error" :title="`DAY ${day.dayNumber} 일정 정보를 현재 다시 확인하지 못했어요.`">다른 Day의 일정은 그대로 볼 수 있어요. <button class="text-button" type="button" @click="trips.loadPlanner(guestId, tripId, day.dayNumber)">다시 시도</button></StatusMessage>
         <aside v-if="day.routeSanity" class="route-sanity" :data-severity="day.routeSanity.severity"><strong>이동 부담 · {{ routeSanityLabel(day.routeSanity.severity) }}</strong><span>{{ routeSanitySummary(day.routeSanity) }}</span></aside>
-        <div class="planner-layout"><KakaoDayMap :items="day.items" :legs="day.displayLegs" /><div class="timeline-panel"><ol class="timeline"><li v-for="(item, index) in day.items" :key="item.plannerItemId"><article class="surface planner-card"><span class="timeline-number">{{ item.displayIndex }}</span><KtoImage :src="item.imageUrl" :alt="`${item.title} 관광정보 이미지`" /><div><p class="card-kicker">{{ SLOT_LABELS[item.slotType] }}</p><h3>{{ item.title }}</h3><p class="address">{{ item.address }}</p><p class="source-line">{{ item.sourceAttribution }}</p></div></article><div v-if="day.displayLegs[index]" class="planner-leg final-plan-leg"><strong>{{ day.displayLegs[index].displayFrom }} → {{ day.displayLegs[index].displayTo }}</strong><span>{{ transitSummary(day.displayLegs[index]) }}</span></div></li></ol></div></div>
+        <div class="planner-layout"><KakaoDayMap :items="day.items" :legs="day.displayLegs" /><div class="timeline-panel"><ol class="timeline"><li v-for="(item, index) in day.items" :key="item.plannerItemId"><article class="surface planner-card final-result-card"><span class="timeline-number">{{ item.displayIndex }}</span><KtoImage :src="item.imageUrl" :alt="`${item.title} 관광정보 이미지`" /><div><p class="card-kicker">{{ SLOT_LABELS[item.slotType] }}</p><h3>{{ item.title }}</h3><p class="address">{{ item.address }}</p><p class="final-movement-evidence">{{ finalMovementEvidence(day, index) }}</p><div class="contact-actions"><a v-for="action in finalActions(item)" :key="action.kind" class="action-button button-secondary" :href="action.href" :target="action.kind === 'phone' ? undefined : '_blank'" :rel="action.kind === 'phone' ? undefined : 'noopener noreferrer'">{{ action.label }}</a></div><p class="source-line">{{ item.sourceAttribution }}</p></div></article><div v-if="day.displayLegs[index]" class="planner-leg final-plan-leg"><strong>{{ day.displayLegs[index].displayFrom }} → {{ day.displayLegs[index].displayTo }}</strong><span>{{ transitSummary(day.displayLegs[index]) }}</span></div></li></ol></div></div>
       </section>
     </template>
   </main>
