@@ -14,6 +14,19 @@ async function render(path) {
  return { html, router }
 }
 describe('제품 경로와 실제 상태를 구분하는 Shell', () => {
+ it('Journey와 Final Plan은 서로 다른 전용 컴포넌트로 라우팅한다', async () => {
+  const journey = makeRouter(createMemoryHistory())
+  await journey.push('/travel/example-trip')
+  await journey.isReady()
+  expect(journey.currentRoute.value.name).toBe('trip-journey')
+  expect(journey.currentRoute.value.matched.at(-1).components.default.__name).toBe('TripJourneyView')
+
+  const plan = makeRouter(createMemoryHistory())
+  await plan.push('/travel/example-trip/plan')
+  await plan.isReady()
+  expect(plan.currentRoute.value.name).toBe('trip-plan')
+  expect(plan.currentRoute.value.matched.at(-1).components.default.__name).toBe('TripPlanView')
+ })
  it.each([
   ['/', '좋은 한 끼가,'], ['/login', '카카오로 계속하기'],
   ['/profiles', '가족의 여행 이야기를 기다려요'], ['/profiles/new', '프로필 저장'],

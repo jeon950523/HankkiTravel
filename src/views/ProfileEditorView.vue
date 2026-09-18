@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppIcon from '../components/AppIcon.vue'
 import StatusMessage from '../components/StatusMessage.vue'
@@ -12,6 +12,8 @@ const guest = useGuestStore()
 const profiles = useProfilesStore()
 const saving = ref(false)
 const error = ref('')
+const saved = ref(false)
+const savedProfileId = ref(null)
 const profileId = computed(() => route.params.profileId ? Number(route.params.profileId) : null)
 const isEdit = computed(() => Number.isSafeInteger(profileId.value) && profileId.value > 0)
 const cautions = [
@@ -46,13 +48,18 @@ const toggleCaution = (member, value) => {
 }
 const addMember = () => form.members.push(newMember())
 const removeMember = index => { if (form.members.length > 1) form.members.splice(index, 1) }
+const saveButtonLabel = computed(() => saving.value ? '저장 중...' : saved.value ? '저장됨 ✓' : error.value ? '다시 시도' : '프로필 저장')
+watch(form, () => { if (!saving.value) saved.value = false }, { deep: true })
 const submit = async () => {
   saving.value = true
   error.value = ''
+  saved.value = false
   try {
     const guestPublicId = await guest.ensureGuest()
-    const saved = await profiles.save(guestPublicId, { ...form, members: form.members.map(normalizeMember) }, profileId.value)
-    await router.push(`/profiles/${saved.profileId}/edit`)
+    const savedProfile = await profiles.save(guestPublicId, { ...form, members: form.members.map(normalizeMember) }, profileId.value)
+    savedProfileId.value = savedProfile.profileId
+    await router.replace(`/profiles/${savedProfile.profileId}/edit`)
+    saved.value = true
   } catch (cause) {
     error.value = cause.message || '프로필을 저장하지 못했어요.'
   } finally { saving.value = false }
@@ -94,8 +101,10 @@ onMounted(async () => {
           <div class="form-grid"><label>알레르기 주의 재료<input v-model.trim="member.allergenText" maxlength="500" placeholder="예: 땅콩, 새우" /><span class="input-note">쉼표로 구분해 주세요. 공개 정보가 없으면 안전하다고 판단하지 않아요.</span></label><label>피하고 싶은 음식/재료<input v-model.trim="member.avoidedFoodText" maxlength="500" placeholder="예: 고수, 내장" /><span class="input-note">명시적 메뉴 충돌이 확인될 때만 제외에 사용해요.</span></label></div>
         </article>
       </section>
-      <StatusMessage v-if="error" kind="error" title="저장하지 못했어요">{{ error }}</StatusMessage>
-      <button class="action-button button-primary" type="submit" :disabled="saving">{{ saving ? '프로필 저장 중…' : '프로필 저장' }}</button>
+      <StatusMessage v-if="error" kind="error" title="저장하지 못했어요">{{ error }} 입력 내용은 그대로 유지했어요.</StatusMessage>
+      <StatusMessage v-if="saved" title="✓ 가족 프로필을 저장했어요.">여행을 만들 때 방금 저장한 프로필이 자동으로 선택돼요.</StatusMessage>
+      <RouterLink v-if="saved && savedProfileId" class="action-button button-primary" :to="{ path: '/travel/new', query: { profileId: savedProfileId } }">이 프로필로 여행 시작하기</RouterLink>
+      <button class="action-button" :class="saved ? 'button-secondary' : 'button-primary'" type="submit" :disabled="saving">{{ saveButtonLabel }}</button>
     </form>
   </div>
 </template>

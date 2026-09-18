@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import StatusMessage from '../components/StatusMessage.vue'
 import { useGuestStore } from '../stores/guest'
 import { useProfilesStore } from '../stores/profiles'
@@ -8,6 +8,7 @@ import { useTripsStore } from '../stores/trips'
 import { addDays, buildTripPayload, durationDays, MEAL_LABELS, MEAL_TYPES, validateTripDraft } from '../domain/trip'
 
 const router = useRouter()
+const route = useRoute()
 const guest = useGuestStore()
 const profiles = useProfilesStore()
 const trips = useTripsStore()
@@ -60,7 +61,11 @@ onMounted(async () => {
       guestPublicId = await guest.ensureGuest()
       loaded = await profiles.load(guestPublicId)
     }
-    if (loaded[0]) form.profileId = String(profiles.selectedProfileId || loaded[0].profileId)
+    const requestedProfileId = Number(route.query.profileId)
+    const requestedProfile = Number.isSafeInteger(requestedProfileId) && loaded.some(item => item.profileId === requestedProfileId)
+      ? requestedProfileId
+      : null
+    if (loaded[0]) form.profileId = String(requestedProfile || profiles.selectedProfileId || loaded[0].profileId)
   } catch { setupError.value = '가족 프로필을 불러오지 못했어요. 프로필 화면에서 다시 시도해 주세요.' }
 })
 </script>
