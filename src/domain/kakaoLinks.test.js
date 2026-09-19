@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildKakaoDirectionsUrl, kakaoDirectionsAction } from './kakaoLinks'
+import { buildKakaoDirectionsUrl, kakaoDirectionsAction, kakaoPlaceAction } from './kakaoLinks'
 
 const start = { title: '출발 장소', coordinates: { longitude: 126.5, latitude: 33.5 } }
 const end = { title: '도착/식당', coordinates: { longitude: 126.53, latitude: 33.49 }, address: '제주시 현재로' }
@@ -18,5 +18,18 @@ describe('Kakao 길찾기 링크', () => {
     expect(action.precise).toBe(false)
     expect(action.label).toBe('카카오맵에서 검색')
     expect(action.href).toBe('https://map.kakao.com/link/search/%EB%8F%84%EC%B0%A9%20%EC%8B%9D%EB%8B%B9%20%EC%A0%9C%EC%A3%BC%EC%8B%9C')
+  })
+})
+
+describe('Kakao 장소 fallback', () => {
+  it('strict placeUrl을 지도·후기 CTA로 우선한다', () => {
+    expect(kakaoPlaceAction({ placeUrl: 'https://place.map.kakao.com/1' })).toEqual({
+      kind: 'strict-map', label: '지도·후기 보기', href: 'https://place.map.kakao.com/1', precise: true,
+    })
+  })
+
+  it('좌표가 있으면 장소 링크, 좌표도 없으면 검색 링크를 보장한다', () => {
+    expect(kakaoPlaceAction(end)).toMatchObject({ kind: 'place-map', label: '카카오맵에서 보기', precise: true })
+    expect(kakaoPlaceAction({ title: '주소 없는 장소' })).toMatchObject({ kind: 'search', label: '카카오맵에서 검색', precise: false })
   })
 })

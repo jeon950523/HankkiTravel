@@ -22,6 +22,14 @@ export function buildKakaoPlaceUrl(place) {
     : buildKakaoPlaceSearchUrl(place)
 }
 
+export function kakaoPlaceAction(place) {
+  if (place?.placeUrl) return { kind: 'strict-map', label: '지도·후기 보기', href: place.placeUrl, precise: true }
+  const point = routePoint(place)
+  return point
+    ? { kind: 'place-map', label: '카카오맵에서 보기', href: buildKakaoPlaceUrl(place), precise: true }
+    : { kind: 'search', label: '카카오맵에서 검색', href: buildKakaoPlaceSearchUrl(place), precise: false }
+}
+
 export function buildKakaoDirectionsUrl({ start, end, transportMode }) {
   const startPoint = routePoint(start)
   const endPoint = routePoint(end)

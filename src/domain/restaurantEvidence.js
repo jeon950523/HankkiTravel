@@ -1,4 +1,4 @@
-import { buildKakaoPlaceSearchUrl } from './kakaoLinks'
+import { buildKakaoDirectionsUrl, buildKakaoPlaceSearchUrl, kakaoPlaceAction } from './kakaoLinks'
 
 const transitFor = candidate => candidate?.transitSummary || candidate?.transportEvidence
 
@@ -48,7 +48,13 @@ export const hasUnscoredDimensions = candidate => (candidate?.evaluatedDimension
 export function restaurantExternalActions(candidate) {
   const actions = []
   if (candidate?.phone) actions.push({ kind: 'phone', label: '전화하기', href: telephoneHref(candidate.phone) })
-  if (candidate?.placeUrl) actions.push({ kind: 'strict-map', label: '지도·후기 보기', href: candidate.placeUrl })
-  else actions.push({ kind: 'search', label: '카카오맵에서 검색', href: kakaoSearchUrl(candidate) })
+  actions.push(kakaoPlaceAction(candidate))
+  return actions
+}
+
+export function finalPlanExternalActions({ item, previous, transportMode }) {
+  const actions = restaurantExternalActions(item)
+  const directions = previous ? buildKakaoDirectionsUrl({ start: previous, end: item, transportMode }) : null
+  if (directions) actions.push({ kind: 'directions', label: '길찾기', href: directions })
   return actions
 }

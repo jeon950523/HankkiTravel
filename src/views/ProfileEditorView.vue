@@ -98,11 +98,11 @@ onMounted(async () => {
           <div class="form-grid"><label>부르는 이름<input v-model.trim="member.nickname" required maxlength="100" placeholder="예: 엄마" /></label><label>연속 보행(분)<input v-model.number="member.continuousWalkingMinutes" type="number" required min="0" max="480" /></label><label>계단 선호<select v-model="member.stairsPreference"><option value="NEUTRAL">상관없음</option><option value="AVOID">피하고 싶어요</option></select></label></div>
           <fieldset><legend>식사할 때 참고할 점</legend><div class="caution-grid"><label v-for="[value, label] in cautions" :key="value"><input v-model="member.mealCautions" type="checkbox" :value="value" @change="toggleCaution(member, value)" />{{ label }}</label></div></fieldset>
           <label class="check-label"><input v-model="member.bloodSugarCare" type="checkbox" />혈당 관리를 고려하고 있어요</label>
-          <div class="form-grid"><label>알레르기 주의 재료<input v-model.trim="member.allergenText" maxlength="500" placeholder="예: 땅콩, 새우" /><span class="input-note">쉼표로 구분해 주세요. 공개 정보가 없으면 안전하다고 판단하지 않아요.</span></label><label>피하고 싶은 음식/재료<input v-model.trim="member.avoidedFoodText" maxlength="500" placeholder="예: 고수, 내장" /><span class="input-note">명시적 메뉴 충돌이 확인될 때만 제외에 사용해요.</span></label></div>
+          <div class="form-grid profile-restriction-grid"><label>알레르기 주의 재료<input v-model.trim="member.allergenText" maxlength="500" placeholder="예: 땅콩, 새우" /><span class="input-note">쉼표로 구분해 주세요. 공개 정보가 없으면 안전하다고 판단하지 않아요.</span></label><label>피하고 싶은 음식/재료<input v-model.trim="member.avoidedFoodText" maxlength="500" placeholder="예: 고수, 내장" /><span class="input-note">명시적 메뉴 충돌이 확인될 때만 제외에 사용해요.</span></label></div>
         </article>
       </section>
       <StatusMessage v-if="error" kind="error" title="저장하지 못했어요">{{ error }} 입력 내용은 그대로 유지했어요.</StatusMessage>
-      <StatusMessage v-if="saved" title="✓ 가족 프로필을 저장했어요.">여행을 만들 때 방금 저장한 프로필이 자동으로 선택돼요.</StatusMessage>
+      <StatusMessage v-if="saved" title="✓ 가족 프로필이 저장됐어요.">이제 이 조건으로 여행을 시작해볼까요?</StatusMessage>
       <RouterLink v-if="saved && savedProfileId" class="action-button button-primary" :to="{ path: '/travel/new', query: { profileId: savedProfileId } }">이 프로필로 여행 시작하기</RouterLink>
       <button class="action-button" :class="saved ? 'button-secondary' : 'button-primary'" type="submit" :disabled="saving">{{ saveButtonLabel }}</button>
     </form>

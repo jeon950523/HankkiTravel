@@ -49,7 +49,7 @@ async function mockGoldenApi(page, { map = true } = {}) {
     if (pathname.endsWith('/days/1/planner') && request.method() === 'GET') {
       const items = []
       if (focused) items.push({ slotType: 'DAY_FOCUS', provider: 'KTO', contentId: '456', contentType: '12', title: '현재 관광지', address: '제주시 여행로', imageUrl: null, coordinates: { longitude: 126.5, latitude: 33.5 }, sourceAttribution: '출처: ⓒ한국관광공사', dataAvailability: 'CURRENT_DATA' })
-      if (anchored) { const selected = selectedRestaurant === '124' ? replacementCandidate : candidate; items.push({ slotType: 'LUNCH', provider: 'KTO', contentId: selected.contentId, contentType: '39', title: selected.title, address: selected.address, imageUrl: null, coordinates: selected.coordinates, sourceAttribution: '출처: ⓒ한국관광공사', dataAvailability: 'CURRENT_DATA', telephone: selected.phone, menuSummary: selected.menuSummary }) }
+      if (anchored) { const selected = selectedRestaurant === '124' ? replacementCandidate : candidate; items.push({ slotType: 'LUNCH', provider: 'KTO', contentId: selected.contentId, contentType: '39', title: selected.title, address: selected.address, imageUrl: null, coordinates: selected.coordinates, sourceAttribution: '출처: ⓒ한국관광공사', dataAvailability: 'CURRENT_DATA', telephone: selected.phone, placeUrl: selected.placeUrl, menuSummary: selected.menuSummary }) }
       const legs = items.length > 1 ? [{ fromSlotType: 'DAY_FOCUS', toSlotType: 'LUNCH', mode: 'PUBLIC_TRANSIT', durationMinutes: 195, transferCount: 3, explicitWalkingDistanceMeters: 180, unaccountedDistanceMeters: 0, dataAvailability: 'CURRENT_DATA', burdenSeverity: 'HIGH', burdenReasons: ['대중교통 이동 시간이 매우 긴 구간이에요.'] }] : []
       const routeSanity = legs.length ? { state: 'EVALUATED', severity: 'HIGH', evidenceCoverage: 100, evaluatedLegCount: 1, totalLegCount: 1, longestLeg: { legIndex: 0, fromSlotType: 'DAY_FOCUS', toSlotType: 'LUNCH', mode: 'PUBLIC_TRANSIT', durationMinutes: 195, straightDistanceMeters: null, severity: 'HIGH' }, totalTransitMinutes: 195, totalStraightDistanceMeters: null, totalTransfers: 3, totalExplicitWalkingDistanceMeters: 180, reasons: ['확인 가능한 이동 구간 중 긴 이동이 1개 있어요.'], suggestedActions: ['NEAR_RESTAURANT', 'KEEP_ITINERARY'] } : { state: 'NOT_EVALUATED', severity: 'NOT_EVALUATED', evidenceCoverage: 0, evaluatedLegCount: 0, totalLegCount: 0, longestLeg: null, reasons: [], suggestedActions: [] }
       return json({ tripPublicId: tripId, dayNumber: 1, travelDate: '2026-09-16', items, legs, routeSanity })
@@ -121,8 +121,11 @@ for (const width of [360, 390, 768]) {
     const activeSaveButton = page.locator('.profile-form button[type="submit"]')
     await expect(activeSaveButton).toBeDisabled()
     await expect(activeSaveButton).toHaveText('저장 중...')
-    await expect(page.getByText('✓ 가족 프로필을 저장했어요.')).toBeVisible()
+    await expect(page.getByText('✓ 가족 프로필이 저장됐어요.')).toBeVisible()
+    await expect(page.getByText('이제 이 조건으로 여행을 시작해볼까요?')).toBeVisible()
     await expect(page.getByRole('button', { name: '저장됨 ✓' })).toBeVisible()
+    await expect(page.getByLabel('알레르기 주의 재료')).toHaveCSS('height', '48px')
+    await expect(page.getByLabel('피하고 싶은 음식/재료')).toHaveCSS('height', '48px')
     await page.getByRole('link', { name: '이 프로필로 여행 시작하기' }).click()
     await expect(page).toHaveURL(`/travel/new?profileId=${profile.profileId}`)
     await expect(page.getByRole('radio', { name: new RegExp(profile.name) })).toBeChecked()
@@ -227,12 +230,15 @@ test('완료된 여행의 Final Plan은 결과만 보이고 수정은 Journey로
   await expect(page.getByText('이 Day의 첫 장소예요.')).toBeVisible()
   await expect(page.getByText(/이전 장소에서 대중교통 약 195분/)).toBeVisible()
   await expect(page.getByText('갈치조림 · 성게미역국')).toBeVisible()
+  await expect(page.getByRole('link', { name: '카카오맵에서 보기' })).toBeVisible()
+  await expect(page.getByRole('link', { name: '지도·후기 보기' })).toBeVisible()
+  await expect(page.getByRole('link', { name: '길찾기' })).toHaveAttribute('href', /\/link\/by\/traffic\//)
   await expect(page.getByRole('link', { name: '카카오맵에서 경로 보기' })).toHaveAttribute('href', /\/link\/by\/traffic\//)
   await expect(page.getByRole('link', { name: '전화하기' })).toHaveAttribute('href', 'tel:0641234567')
-  const kakaoSearch = page.getByRole('link', { name: '카카오맵에서 검색' }).last()
-  await expect(kakaoSearch).toHaveAttribute('href', /https:\/\/map\.kakao\.com\/link\/search\//)
-  await expect(kakaoSearch).toHaveAttribute('target', '_blank')
-  await expect(kakaoSearch).toHaveAttribute('rel', 'noopener noreferrer')
+  const strictMap = page.getByRole('link', { name: '지도·후기 보기' })
+  await expect(strictMap).toHaveAttribute('href', 'https://place.map.kakao.com/123')
+  await expect(strictMap).toHaveAttribute('target', '_blank')
+  await expect(strictMap).toHaveAttribute('rel', 'noopener noreferrer')
   await expect(page.getByText(/추천 식당 보기|다른 식당 보기|직접 찾기|선택 해제/)).toHaveCount(0)
   await page.getByRole('link', { name: '여행 수정하기' }).click()
   await expect(page).toHaveURL(new RegExp(`/travel/${tripId}\\?edit=1$`))

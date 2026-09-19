@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { coveragePresentation, hasUnscoredDimensions, kakaoSearchUrl, restaurantExternalActions, restaurantMovementEvidence } from './restaurantEvidence'
+import { coveragePresentation, finalPlanExternalActions, hasUnscoredDimensions, kakaoSearchUrl, restaurantExternalActions, restaurantMovementEvidence } from './restaurantEvidence'
 
 describe('식당 외부 확인 CTA', () => {
   it('strict match가 없으면 Kakao link/search 계약과 URL 인코딩을 지킨다', () => {
@@ -15,6 +15,16 @@ describe('식당 외부 확인 CTA', () => {
     [{ phone: null, placeUrl: null, title: '식당', address: '제주시' }, ['카카오맵에서 검색']],
   ])('전화와 strict match 조합에 맞는 CTA만 노출한다', (candidate, labels) => {
     expect(restaurantExternalActions(candidate).map(item => item.label)).toEqual(labels)
+  })
+
+  it('이전 장소와 현재 장소 좌표가 있으면 Final Plan 길찾기를 함께 제공한다', () => {
+    const actions = finalPlanExternalActions({
+      previous: { title: '출발', coordinates: { longitude: 126.5, latitude: 33.5 } },
+      item: { phone: null, placeUrl: null, title: '식당', coordinates: { longitude: 126.53, latitude: 33.49 } },
+      transportMode: 'CAR',
+    })
+    expect(actions.map(item => item.label)).toEqual(['카카오맵에서 보기', '길찾기'])
+    expect(actions[1].href).toContain('/link/by/car/')
   })
 })
 
