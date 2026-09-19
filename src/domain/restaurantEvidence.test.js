@@ -23,8 +23,17 @@ describe('식당 외부 확인 CTA', () => {
       item: { phone: null, placeUrl: null, title: '식당', coordinates: { longitude: 126.53, latitude: 33.49 } },
       transportMode: 'CAR',
     })
-    expect(actions.map(item => item.label)).toEqual(['카카오맵에서 보기', '길찾기'])
+    expect(actions.map(item => item.label)).toEqual(['카카오맵에서 검색', '길찾기'])
     expect(actions[1].href).toContain('/link/by/car/')
+  })
+
+  it('DAY_FOCUS만 좌표 기반 장소 보기 CTA를 사용한다', () => {
+    const actions = finalPlanExternalActions({
+      item: { slotType: 'DAY_FOCUS', title: '첨성대', coordinates: { longitude: 129.22, latitude: 35.83 } },
+      previous: null,
+      transportMode: 'CAR',
+    })
+    expect(actions.map(item => item.label)).toEqual(['카카오맵에서 보기'])
   })
 })
 

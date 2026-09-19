@@ -28,8 +28,9 @@ describe('Kakao 장소 fallback', () => {
     })
   })
 
-  it('좌표가 있으면 장소 링크, 좌표도 없으면 검색 링크를 보장한다', () => {
-    expect(kakaoPlaceAction(end)).toMatchObject({ kind: 'place-map', label: '카카오맵에서 보기', precise: true })
+  it('좌표 장소 링크는 명시적으로 요청하고 기본 fallback은 검색 링크를 보장한다', () => {
+    expect(kakaoPlaceAction(end, { coordinateMap: true })).toMatchObject({ kind: 'place-map', label: '카카오맵에서 보기', precise: true })
+    expect(kakaoPlaceAction(end)).toMatchObject({ kind: 'search', label: '카카오맵에서 검색', precise: false })
     expect(kakaoPlaceAction({ title: '주소 없는 장소' })).toMatchObject({ kind: 'search', label: '카카오맵에서 검색', precise: false })
   })
 })

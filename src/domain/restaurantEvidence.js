@@ -53,7 +53,9 @@ export function restaurantExternalActions(candidate) {
 }
 
 export function finalPlanExternalActions({ item, previous, transportMode }) {
-  const actions = restaurantExternalActions(item)
+  const actions = []
+  if (item?.phone) actions.push({ kind: 'phone', label: '전화하기', href: telephoneHref(item.phone) })
+  actions.push(kakaoPlaceAction(item, { coordinateMap: item?.slotType === 'DAY_FOCUS' }))
   const directions = previous ? buildKakaoDirectionsUrl({ start: previous, end: item, transportMode }) : null
   if (directions) actions.push({ kind: 'directions', label: '길찾기', href: directions })
   return actions
