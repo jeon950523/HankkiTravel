@@ -12,10 +12,10 @@ const guest = useGuestStore()
 const profiles = useProfilesStore()
 const saving = ref(false)
 const error = ref('')
-const navigationState = typeof window === 'undefined' ? {} : window.history.state
-const initialSavedProfileId = Number(navigationState?.savedProfileId)
-const saved = ref(navigationState?.profileSaved === true && Number.isSafeInteger(initialSavedProfileId))
+const initialSavedProfileId = Number(profiles.lastSavedProfileId)
+const saved = ref(Number.isSafeInteger(initialSavedProfileId) && initialSavedProfileId === Number(route.params.profileId))
 const savedProfileId = ref(saved.value ? initialSavedProfileId : null)
+if (saved.value) profiles.lastSavedProfileId = null
 const profileId = computed(() => route.params.profileId ? Number(route.params.profileId) : null)
 const isEdit = computed(() => Number.isSafeInteger(profileId.value) && profileId.value > 0)
 const cautions = [
@@ -60,11 +60,9 @@ const submit = async () => {
     const guestPublicId = await guest.ensureGuest()
     const savedProfile = await profiles.save(guestPublicId, { ...form, members: form.members.map(normalizeMember) }, profileId.value)
     savedProfileId.value = savedProfile.profileId
-    await router.replace({
-      path: `/profiles/${savedProfile.profileId}/edit`,
-      state: { profileSaved: true, savedProfileId: savedProfile.profileId },
-    })
+    await router.replace(`/profiles/${savedProfile.profileId}/edit`)
     saved.value = true
+    profiles.lastSavedProfileId = null
   } catch (cause) {
     error.value = cause.message || '프로필을 저장하지 못했어요.'
   } finally { saving.value = false }

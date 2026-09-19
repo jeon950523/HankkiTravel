@@ -13,7 +13,7 @@ async function jsonOrThrow(response, fallback) {
 }
 
 export const useProfilesStore = defineStore('profiles', {
-  state: () => ({ items: [], selectedProfileId: null, loading: false, error: null }),
+  state: () => ({ items: [], selectedProfileId: null, lastSavedProfileId: null, loading: false, error: null }),
   actions: {
     async load(guestPublicId) {
       this.loading = true
@@ -45,6 +45,7 @@ export const useProfilesStore = defineStore('profiles', {
         if (index >= 0) this.items.splice(index, 1, body)
         else this.items.unshift(body)
         this.selectedProfileId = body.profileId
+        this.lastSavedProfileId = body.profileId
         return body
       } catch (error) {
         this.error = error.message || '가족 프로필을 저장하지 못했어요.'
