@@ -58,7 +58,7 @@ public final class TripPlannerView {
             long explicitWalkingDistanceMeters,int transferCount,String caution) { }
     public record Item(String slotType,String provider,String contentId,String contentType,String title,String address,
             String imageUrl,Coordinates coordinates,String sourceAttribution,String dataAvailability,String telephone,
-            List<String> menuSummary) {
+            String placeUrl,List<String> menuSummary) {
         public Item { menuSummary=menuSummary==null?List.of():List.copyOf(menuSummary); }
     }
     public record Leg(String fromSlotType,String toSlotType,String mode,BigDecimal durationMinutes,int transferCount,

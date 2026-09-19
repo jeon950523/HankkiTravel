@@ -11,6 +11,7 @@ import java.util.*;
 import kr.hankkitravel.identity.application.GuestApplicationService;
 import kr.hankkitravel.profile.application.FamilyProfileApplicationService;
 import kr.hankkitravel.recommendation.application.AreaDemandSignalProvider;
+import kr.hankkitravel.recommendation.application.ContactEnrichmentProvider;
 import kr.hankkitravel.shared.geo.Coordinates;
 import kr.hankkitravel.shared.integration.*;
 import kr.hankkitravel.tourism.application.TourismRealtimeSource;
@@ -46,6 +47,7 @@ class TripPlannerMysqlIntegrationTest {
     @Autowired TripScheduleService trips;@Autowired TripPlannerService planner;@Autowired TripPlaceScheduleService places;
     @Autowired JdbcTemplate jdbc;@Autowired Flyway flyway;@MockitoBean TourismRealtimeSource source;
     @MockitoBean TransitRouteFinder transit;@MockitoBean AreaDemandSignalProvider demand;@LocalServerPort int port;
+    @MockitoBean ContactEnrichmentProvider contacts;
     String guest;long profile;TripView trip;final LocalDate start=LocalDate.of(2026,9,20);
     @BeforeEach void prepare(){
         guest=guests.create().getPublicId();profile=profiles.create(guest,new FamilyProfileApplicationService.ProfileCommand(
@@ -82,6 +84,8 @@ class TripPlannerMysqlIntegrationTest {
         });
         when(source.fetchPlaceDetail(anyString())).thenAnswer(inv->{assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();return live(inv.getArgument(0));});
         when(demand.signal(any(),any())).thenReturn(AreaDemandSignalProvider.Signal.notEvaluated("202508",0,0));
+        when(contacts.enrich(anyString(),anyString(),any())).thenReturn(new ContactEnrichmentProvider.Result(
+                ContactEnrichmentProvider.Status.MATCHED,"064-123-4567","https://place.map.kakao.com/39001"));
         when(transit.findRoutes(any(),any())).thenAnswer(inv->{assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
             return new TransitResult(TransitResult.Status.OK,List.of(new TransitRoute(new BigDecimal("25.5"),5000,1,1500,"PUBLIC_TRANSIT",List.of(),500,900,"https://map.kakao.test")),"https://map.kakao.test");});
     }
@@ -156,6 +160,12 @@ class TripPlannerMysqlIntegrationTest {
         var view=planner.planner(guest,trip.tripPublicId(),1);
         assertThat(view.items()).extracting(TripPlannerView.Item::slotType).containsExactly("BREAKFAST","MORNING_ACTIVITY","LUNCH","AFTERNOON_ACTIVITY","DINNER","STAY");
         assertThat(view.items()).allSatisfy(i->{assertThat(i.dataAvailability()).isEqualTo("CURRENT_DATA");assertThat(i.title()).startsWith("LIVE-");});
+        assertThat(view.items()).filteredOn(item->"39".equals(item.contentType())).allSatisfy(item->{
+            assertThat(item.telephone()).isEqualTo("064-123-4567");
+            assertThat(item.placeUrl()).isEqualTo("https://place.map.kakao.com/39001");
+            assertThat(item.menuSummary()).containsExactly("비빔밥");
+        });
+        assertThat(view.items()).filteredOn(item->!"39".equals(item.contentType())).allSatisfy(item->assertThat(item.placeUrl()).isNull());
         assertThat(view.legs()).hasSize(5).allSatisfy(l->{assertThat(l.dataAvailability()).isEqualTo("CURRENT_DATA");assertThat(l.explicitWalkingDistanceMeters()).isEqualTo(500);assertThat(l.unaccountedDistanceMeters()).isEqualTo(900);});
         assertThat(view.routeSanity().state()).isEqualTo("EVALUATED");
         assertThat(view.routeSanity().severity()).isEqualTo("CAUTION");
