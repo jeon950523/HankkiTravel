@@ -122,6 +122,7 @@ for (const width of [360, 390, 768]) {
     await expect(activeSaveButton).toBeDisabled()
     await expect(activeSaveButton).toHaveText('저장 중...')
     await expect(page.getByText('✓ 가족 프로필이 저장됐어요.')).toBeVisible()
+    await expect(page).toHaveURL(`/profiles/${profile.profileId}/edit`)
     await expect(page.getByText('이제 이 조건으로 여행을 시작해볼까요?')).toBeVisible()
     await expect(page.getByRole('button', { name: '저장됨 ✓' })).toBeVisible()
     await expect(page.getByLabel('알레르기 주의 재료')).toHaveCSS('height', '48px')
