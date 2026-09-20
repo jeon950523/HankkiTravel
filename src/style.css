@@ -319,14 +319,8 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 .kto-image { width: 100%; aspect-ratio: 16 / 9; display: grid; place-items: center; overflow: hidden; color: var(--color-olive); background: linear-gradient(135deg, var(--color-soft), var(--color-sand)); font-size: 13px; font-weight: 700; }
 .kto-image img { width: 100%; height: 100%; object-fit: cover; }
 .live-card-body { min-width: 0; display: grid; gap: 13px; padding: 20px; }
-.decision-results[aria-labelledby="meal-result"] > .live-card,
-.restaurant-alternative-results > .live-card,
-.attraction-results > .attraction-card,
-.attraction-alternative-results > .attraction-card { width: 100%; max-width: 880px; margin-inline: auto; }
-.decision-results[aria-labelledby="meal-result"] > .live-card > .kto-image,
-.restaurant-alternative-results > .live-card > .kto-image,
-.attraction-results > .attraction-card > .kto-image,
-.attraction-alternative-results > .attraction-card > .kto-image { width: 100%; height: auto; aspect-ratio: 16 / 9; }
+.candidate-card { width: 100%; max-width: 880px; margin-inline: auto; }
+.candidate-card > .kto-image { width: 100%; height: auto; aspect-ratio: 16 / 9; }
 .decision-results[aria-labelledby="meal-result"] .menu-evidence p { word-break: keep-all; overflow-wrap: break-word; }
 .decision-results[aria-labelledby="meal-result"] .contact-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
@@ -419,14 +413,8 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   .wizard-options.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .live-card { display: grid; grid-template-columns: minmax(220px, 34%) 1fr; }
   .live-card > .kto-image { height: 100%; aspect-ratio: auto; }
-  .decision-results[aria-labelledby="meal-result"] > .live-card,
-  .restaurant-alternative-results > .live-card,
-  .attraction-results > .attraction-card,
-  .attraction-alternative-results > .attraction-card { display: block; }
-  .decision-results[aria-labelledby="meal-result"] > .live-card > .kto-image,
-  .restaurant-alternative-results > .live-card > .kto-image,
-  .attraction-results > .attraction-card > .kto-image,
-  .attraction-alternative-results > .attraction-card > .kto-image { height: auto; aspect-ratio: 16 / 9; }
+  .candidate-card { display: block; }
+  .candidate-card > .kto-image { height: auto; aspect-ratio: 16 / 9; }
   .next-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .alternative-actions { grid-template-columns: minmax(180px, .4fr) minmax(0, 1fr); align-items: end; }
   .trip-overview { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
@@ -454,7 +442,6 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 .optional-inline { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--color-border); }
 .optional-inline > span { color: var(--color-text-muted); font-size: .9rem; }
 .candidate-grid,.final-plan-page { display: grid; gap: 16px; }
-.compact-live-card { grid-template-columns: minmax(110px,180px) 1fr; }
 .final-plan-page { gap: 24px; }
 .content-page.final-plan-page { max-width: 1040px; }
 .final-plan-header { grid-template-columns: 1fr auto; align-items: start; }
@@ -471,7 +458,7 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 .final-result-card .contact-actions .action-button { min-height: 40px; padding: 8px 12px; }
 .final-movement-evidence { margin: 8px 0 0; color: var(--color-secondary); line-height: 1.65; }
 @media (max-width: 768px) {
-  .final-plan-header,.compact-live-card { grid-template-columns: 1fr; }
+  .final-plan-header { grid-template-columns: 1fr; }
   .final-plan-day .planner-layout > .day-map-shell { min-height: 320px; aspect-ratio: 16 / 9; }
   .next-decision-primary .action-button,.day-complete-card .action-button { width: 100%; }
 }

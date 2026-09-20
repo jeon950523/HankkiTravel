@@ -1,7 +1,7 @@
 import { test, expect, chromium } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 
-const screenshotDir = '../docs/implementation/browser/big04f1'
+const screenshotDir = '../docs/implementation/browser/big04f2'
 mkdirSync(screenshotDir, { recursive: true })
 
 const guestId = '9d4f2c3a-6d29-4c12-8a70-2c6a2f87b111'
@@ -11,6 +11,7 @@ const profile = { profileId: 42, name: '부모님과 제주', transportMode: 'CA
 const candidate = { contentId: '123', title: '현재 식당', areaLabel: '제주시 현재로', address: '제주시 현재로', coordinates: { longitude: 126.53, latitude: 33.49 }, imageUrl: null, compatibilityScore: 82, overallScore: 82, evidenceCoverage: 70, informationEvidence: 'REFERENCE', distanceMeters: 1800, phone: '064-123-4567', placeUrl: 'https://place.map.kakao.com/123', contactEvidence: 'KTO_DIRECT', menuSummary: ['갈치조림', '성게미역국'], ourFamilyFitReasons: ['공개 정보에서 확인한 근거예요.'], ourFamilyCautions: ['원재료는 직접 확인해 주세요.'], checkBeforeVisit: ['공개된 메뉴 정보가 부족해 식사 조건을 충분히 비교하기 어려워요. 방문 전에 전화로 재료와 조리법을 확인해 주세요.'], nutritionEvidence: [{ menuName: '비빔밥', matchLevel: 'HIGH', standardFood: '비빔밥', referenceLabel: '표준 음식 기준' }, { menuName: '돌솥밥', matchLevel: 'MEDIUM', standardFood: '비빔밥', referenceLabel: '유사 음식 기준' }], evaluatedDimensions: [{ code: 'FAMILY_MEAL_FIT', label: '식사 조건', weight: 40, evaluated: true, awardedPoints: 34, maxPoints: 40, evidenceState: 'EVALUATED' }, { code: 'AREA_DEMAND_SIGNAL', label: '지역 방문 수요', weight: 10, evaluated: true, awardedPoints: 8, maxPoints: 10, evidenceState: 'EVALUATED' }, { code: 'REVIEW_SIGNAL', label: '후기/평판', weight: 10, evaluated: false, awardedPoints: 0, maxPoints: 0, evidenceState: 'NOT_EVALUATED' }] }
 const replacementCandidate = { ...candidate, contentId: '124', title: '새 식당', address: '제주시 새로', coordinates: { longitude: 126.55, latitude: 33.48 }, phone: null, placeUrl: null, menuSummary: [], overallScore: 74, compatibilityScore: 74, evidenceCoverage: 30 }
 const place = { contentId: '456', contentType: '12', title: '현재 관광지', areaLabel: '제주시', imageUrl: null, address: '제주시 여행로', coordinates: { longitude: 126.5, latitude: 33.5 }, informationEvidence: 'TOUR_API_LIVE', perspective: 'NEARBY_COURSE', overallScore: 88, evidenceCoverage: 100, routeBurden: { state: 'REFERENCE', level: 'LOW', score: 90 }, distanceMeters: 4200, transitSummary: null, familyMobilityEvidence: ['자동차는 직선거리 기준 참고값입니다.'], reasons: ['현재 일정에서 이동 부담이 적어요.'], cautions: ['실제 도로 이동시간이 아닙니다. 자동차 이동시간은 제공하지 않아요.'], fitReasons: ['현재 일정에서 이동 부담이 적어요.'], checkBeforeVisit: ['실제 도로 이동시간이 아닙니다.'], sourceAttribution: '출처: ⓒ한국관광공사' }
+const dessert = { contentId: '789', contentType: '39', title: '제주 가족 카페', imageUrl: null, address: '제주시 디저트로', coordinates: { longitude: 126.54, latitude: 33.48 }, distanceMeters: 620, telephone: '064-000-0000', reasons: ['식사 장소에서 가까워 잠깐 쉬어가기 좋아요.'], cautions: ['재료와 교차조리는 방문 전 확인해 주세요.'], sourceAttribution: '출처: ⓒ한국관광공사' }
 const recommendation = { topCandidates: [candidate], perspectives: [{ perspective: 'BALANCED', status: 'READY', message: null, candidates: [candidate] }], candidateCount: 1, dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사', nutritionNotice: '표준 음식 기준 또는 유사 음식 기준 참고정보입니다.', recommendationContext: { originSlotType: 'DAY_FOCUS', originTitle: '현재 관광지', originSource: 'CHRONOLOGICAL_ANCHOR' } }
 
 async function mockKakaoMap(page) {
@@ -31,7 +32,7 @@ async function mockKakaoMap(page) {
   })
 }
 
-async function mockGoldenApi(page, { map = true } = {}) {
+async function mockGoldenApi(page, { map = true, emptyDessert = false } = {}) {
   if (map) await mockKakaoMap(page)
   else await page.route('https://dapi.kakao.com/**', route => route.abort())
   let anchored = false; let focused = false; let selectedRestaurant = ''
@@ -45,7 +46,9 @@ async function mockGoldenApi(page, { map = true } = {}) {
     if (pathname.endsWith(`/meal-slots/${slotId}/recommendations`) && request.method() === 'POST') return json(anchored ? { ...recommendation, topCandidates: [replacementCandidate], perspectives: [{ perspective: 'BALANCED', status: 'READY', message: null, candidates: [replacementCandidate] }] } : recommendation)
     if (pathname.endsWith('/days/1/restaurant-alternatives') && request.method() === 'POST') return json({ slotType: 'LUNCH', candidates: [replacementCandidate], dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사', recommendationContext: { originSlotType: 'DAY_FOCUS', originTitle: '현재 관광지', originSource: 'CHRONOLOGICAL_ANCHOR' } })
     if (pathname.endsWith('/days/1/restaurant-search') && request.method() === 'GET') return json({ slotType: 'LUNCH', candidates: [replacementCandidate], dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사', recommendationContext: { originSlotType: 'DAY_FOCUS', originTitle: '현재 관광지', originSource: 'CHRONOLOGICAL_ANCHOR' } })
-    if (pathname.endsWith('/days/1/dessert-recommendations') && request.method() === 'POST') return json({ slotType: 'POST_LUNCH_DESSERT', candidates: [], dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사', recommendationContext: { originSlotType: 'LUNCH', originTitle: '현재 식당', originSource: 'CHRONOLOGICAL_ANCHOR' } })
+    if (pathname.endsWith('/days/1/dessert-recommendations') && request.method() === 'POST') return json({ slotType: 'POST_LUNCH_DESSERT', candidates: emptyDessert ? [] : [dessert], dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사', recommendationContext: { originSlotType: 'LUNCH', originTitle: '현재 식당', originSource: 'CHRONOLOGICAL_ANCHOR' } })
+    if (pathname.endsWith('/days/1/dessert-alternatives') && request.method() === 'POST') return json({ slotType: 'POST_LUNCH_DESSERT', candidates: [{ ...dessert, contentId: '790', title: '제주 다른 카페' }], dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사', recommendationContext: { originSlotType: 'LUNCH', originTitle: '현재 식당', originSource: 'CHRONOLOGICAL_ANCHOR' } })
+    if (pathname.endsWith('/days/1/dessert-search') && request.method() === 'GET') return json({ slotType: 'POST_LUNCH_DESSERT', candidates: [{ ...dessert, contentId: '791', title: '검색한 디저트' }], dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사', recommendationContext: { originSlotType: 'LUNCH', originTitle: '현재 식당', originSource: 'CHRONOLOGICAL_ANCHOR' } })
     if (pathname.endsWith('/days/1/focus-recommendations') && request.method() === 'POST') return json({ slotType: 'DAY_FOCUS', candidates: [place], dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사' })
     if (pathname.endsWith('/days/1/place-anchors/DAY_FOCUS') && request.method() === 'PUT') { focused = true; return json({ publicId: 'focus-ref', slotType: 'DAY_FOCUS', provider: 'KTO', contentId: '456', contentType: '12' }) }
     if (pathname.endsWith(`/meal-slots/${slotId}/anchor`) && request.method() === 'PUT') { anchored = true; selectedRestaurant = JSON.parse(request.postData() || '{}').contentId; return json({ provider: 'KTO', contentId: selectedRestaurant, contentType: '39' }) }
@@ -408,8 +411,43 @@ test('선택형 디저트를 건너뛰면 compact 상태로 접고 다시 추가
   await expect(dessertSection.getByRole('button', { name: '디저트 추천 보기' })).toBeVisible()
 })
 
+for (const width of [360, 390, 768, 1280]) {
+  test('디저트 후보 카드가 ' + width + 'px에서 이미지 위·정보 아래 구조를 유지한다', async ({ page }) => {
+    await page.setViewportSize({ width, height: 1200 })
+    await mockGoldenApi(page)
+    await createDayTrip(page)
+    await selectDayFocus(page)
+    await page.getByRole('button', { name: '점심 TOP3 보기' }).click()
+    await page.getByRole('button', { name: '이 식당 선택' }).click()
+    await page.getByRole('button', { name: '디저트 추천 보기' }).click()
+
+    const card = page.locator('.candidate-grid > .candidate-card').first()
+    const imageBox = await card.locator('.kto-image').boundingBox()
+    const bodyBox = await card.locator('.live-card-body').boundingBox()
+    expect(imageBox).not.toBeNull()
+    expect(bodyBox).not.toBeNull()
+    expect(imageBox.y + imageBox.height).toBeLessThanOrEqual(bodyBox.y + 1)
+    expect(Math.abs(imageBox.width - bodyBox.width)).toBeLessThanOrEqual(2)
+    await expect(card.getByRole('link', { name: '카카오맵에서 검색' })).toBeVisible()
+    await expect(card.getByRole('link', { name: '카카오맵에서 실제 경로 보기' })).toBeVisible()
+    await expect(card.getByRole('button', { name: '이 디저트 선택' })).toBeVisible()
+
+    if (width === 1280) {
+      await card.screenshot({ path: screenshotDir + '/dessert-1280.png' })
+      await page.getByRole('button', { name: '다른 디저트 보기' }).click()
+      const otherCard = page.locator('.candidate-grid > .candidate-card').first()
+      await expect(otherCard.getByRole('heading', { name: '제주 다른 카페' })).toBeVisible()
+      await otherCard.screenshot({ path: screenshotDir + '/dessert-other-1280.png' })
+      await page.getByLabel('디저트 직접 찾기').fill('검색한 디저트')
+      await page.getByRole('region', { name: '식후 디저트' }).getByRole('button', { name: '찾기' }).click()
+      await expect(page.getByRole('heading', { name: '검색한 디저트' })).toBeVisible()
+    }
+    if (width === 390) await card.screenshot({ path: screenshotDir + '/dessert-390.png' })
+  })
+}
+
 test('디저트 후보가 없으면 인코딩된 Kakao 외부 검색으로 안전하게 연결한다', async ({ page }) => {
-  await mockGoldenApi(page)
+  await mockGoldenApi(page, { emptyDessert: true })
   await createDayTrip(page)
   await selectDayFocus(page)
   await page.getByRole('button', { name: '점심 TOP3 보기' }).click()
