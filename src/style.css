@@ -319,6 +319,10 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 .kto-image { width: 100%; aspect-ratio: 16 / 9; display: grid; place-items: center; overflow: hidden; color: var(--color-olive); background: linear-gradient(135deg, var(--color-soft), var(--color-sand)); font-size: 13px; font-weight: 700; }
 .kto-image img { width: 100%; height: 100%; object-fit: cover; }
 .live-card-body { min-width: 0; display: grid; gap: 13px; padding: 20px; }
+.decision-results[aria-labelledby="meal-result"] > .live-card { width: 100%; max-width: 880px; margin-inline: auto; }
+.decision-results[aria-labelledby="meal-result"] > .live-card > .kto-image { width: 100%; height: auto; aspect-ratio: 16 / 9; }
+.decision-results[aria-labelledby="meal-result"] .menu-evidence p { word-break: keep-all; overflow-wrap: break-word; }
+.decision-results[aria-labelledby="meal-result"] .contact-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
 .facts div { min-width: 0; padding: 10px; border-radius: 10px; background: var(--color-soft); }
 .facts dt { color: var(--color-secondary); font-size: 11px; }
@@ -408,6 +412,8 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   .wizard-options.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .live-card { display: grid; grid-template-columns: minmax(220px, 34%) 1fr; }
   .live-card > .kto-image { height: 100%; aspect-ratio: auto; }
+  .decision-results[aria-labelledby="meal-result"] > .live-card { display: block; }
+  .decision-results[aria-labelledby="meal-result"] > .live-card > .kto-image { height: auto; aspect-ratio: 16 / 9; }
   .next-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .alternative-actions { grid-template-columns: minmax(180px, .4fr) minmax(0, 1fr); align-items: end; }
   .trip-overview { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
@@ -436,20 +442,34 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 .candidate-grid,.final-plan-page { display: grid; gap: 16px; }
 .compact-live-card { grid-template-columns: minmax(110px,180px) 1fr; }
 .final-plan-page { gap: 24px; }
+.content-page.final-plan-page { max-width: 1040px; }
 .final-plan-header { grid-template-columns: 1fr auto; align-items: start; }
 .final-plan-header > .action-button { grid-column: 1 / -1; justify-self: start; }
 .final-plan-day .planner-layout { margin-top: 8px; }
+.final-plan-day .planner-layout { grid-template-columns: minmax(0, 1fr); align-items: stretch; gap: 24px; }
+.final-plan-day .planner-layout > .day-map-shell { position: relative; top: auto; width: 100%; height: auto; min-height: 300px; max-height: 420px; aspect-ratio: 16 / 8; }
+.final-plan-day .timeline-panel { width: 100%; }
+.final-result-card { grid-template-columns: 28px minmax(112px, 128px) minmax(0, 1fr); align-items: start; }
+.final-result-card .kto-image { width: 100%; max-width: 128px; aspect-ratio: 1; border-radius: 12px; }
 .final-plan-leg { cursor: default; }
 .final-plan-leg .text-button { justify-self: start; margin-top: 5px; }
-.final-result-card .contact-actions { margin-top: 12px; }
+.final-result-card .contact-actions { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin-top: 12px; }
 .final-result-card .contact-actions .action-button { min-height: 40px; padding: 8px 12px; }
 .final-movement-evidence { margin: 8px 0 0; color: var(--color-secondary); line-height: 1.65; }
 @media (max-width: 768px) {
   .final-plan-header,.compact-live-card { grid-template-columns: 1fr; }
+  .final-plan-day .planner-layout > .day-map-shell { min-height: 320px; aspect-ratio: 16 / 9; }
   .next-decision-primary .action-button,.day-complete-card .action-button { width: 100%; }
 }
 @media (max-width: 390px) {
   .optional-inline { align-items: stretch; flex-direction: column; }
   .optional-inline .text-button { min-height: 44px; text-align: left; }
   .final-plan-header .trip-overview-facts { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .decision-results[aria-labelledby="meal-result"] .contact-actions { grid-template-columns: 1fr; }
+  .final-plan-day .planner-layout > .day-map-shell { height: 250px; min-height: 250px; aspect-ratio: auto; }
+  .final-result-card { grid-template-columns: 24px minmax(0, 1fr); gap: 10px; }
+  .final-result-card > .kto-image,
+  .final-result-card > div { grid-column: 2; }
+  .final-result-card .kto-image { max-width: none; aspect-ratio: 16 / 9; }
+  .final-result-card .contact-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

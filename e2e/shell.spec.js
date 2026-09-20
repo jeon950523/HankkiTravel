@@ -146,7 +146,7 @@ test('프로필 저장 실패는 입력을 보존하고 다시 시도 상태를 
   await expect(page.getByRole('button', { name: '다시 시도' })).toBeVisible()
 })
 
-for (const width of [360, 390, 768]) {
+for (const width of [360, 390, 768, 1280]) {
   test(`여행 Wizard와 라이브 추천 카드가 ${width}px에서 잘리지 않는다`, async ({ page }) => {
     await mockGoldenApi(page); await page.setViewportSize({ width, height: 844 })
     const errors = []; page.on('pageerror', error => errors.push(error.message))
@@ -169,6 +169,12 @@ for (const width of [360, 390, 768]) {
     await expect(page.locator('.nutrition-line')).toContainText('표준 음식 기준')
     await expect(page.locator('.nutrition-line')).toContainText('유사 음식 기준')
     await expect(page.getByText(/공개된 메뉴 정보가 부족해/)).toBeVisible()
+    const restaurantCard = page.locator('.decision-results[aria-labelledby="meal-result"] > .live-card').first()
+    const imageBox = await restaurantCard.locator('.kto-image').boundingBox()
+    const bodyBox = await restaurantCard.locator('.live-card-body').boundingBox()
+    expect(imageBox.height / imageBox.width).toBeCloseTo(9 / 16, 1)
+    expect(imageBox.y + imageBox.height).toBeLessThanOrEqual(bodyBox.y + 1)
+    await expect(restaurantCard.getByRole('button', { name: '이 식당 선택' })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     expect(errors).toEqual([])
   })
@@ -240,9 +246,32 @@ test('완료된 여행의 Final Plan은 결과만 보이고 수정은 Journey로
   await expect(strictMap).toHaveAttribute('href', 'https://place.map.kakao.com/123')
   await expect(strictMap).toHaveAttribute('target', '_blank')
   await expect(strictMap).toHaveAttribute('rel', 'noopener noreferrer')
+  const finalMapBox = await page.getByTestId('day-map').locator('..').boundingBox()
+  const finalTimelineBox = await page.locator('.final-plan-day .timeline-panel').boundingBox()
+  expect(finalMapBox.y + finalMapBox.height).toBeLessThanOrEqual(finalTimelineBox.y + 1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await expect(page.getByText(/추천 식당 보기|다른 식당 보기|직접 찾기|선택 해제/)).toHaveCount(0)
   await page.getByRole('link', { name: '여행 수정하기' }).click()
   await expect(page).toHaveURL(new RegExp(`/travel/${tripId}\\?edit=1$`))
+})
+
+test('Final Plan은 390px에서도 전체폭 지도 아래에 읽기 쉬운 Timeline을 유지한다', async ({ page }) => {
+  await mockGoldenApi(page)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await createDayTrip(page)
+  await selectDayFocus(page)
+  await page.getByRole('button', { name: '점심 TOP3 보기' }).click()
+  await page.getByRole('button', { name: '이 식당 선택' }).click()
+  await page.goto(`/travel/${tripId}/plan`)
+
+  const mapBox = await page.getByTestId('day-map').locator('..').boundingBox()
+  const timelineBox = await page.locator('.final-plan-day .timeline-panel').boundingBox()
+  expect(mapBox.y + mapBox.height).toBeLessThanOrEqual(timelineBox.y + 1)
+  await expect(page.getByText('갈치조림 · 성게미역국')).toBeVisible()
+  await expect(page.getByRole('link', { name: '전화하기' })).toBeVisible()
+  await expect(page.getByRole('link', { name: '지도·후기 보기' })).toBeVisible()
+  await expect(page.getByRole('link', { name: '길찾기' })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })
 
 test('Final Plan에서 수정 진입 후 추천·검색·교체와 fresh hydrate가 이어진다', async ({ page }) => {
