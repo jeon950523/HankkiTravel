@@ -1,4 +1,8 @@
 import { test, expect, chromium } from '@playwright/test'
+import { mkdirSync } from 'node:fs'
+
+const screenshotDir = '../docs/implementation/browser/big04f1'
+mkdirSync(screenshotDir, { recursive: true })
 
 const guestId = '9d4f2c3a-6d29-4c12-8a70-2c6a2f87b111'
 const tripId = 'c4b44ec1-ae62-4568-a7a9-25e4469d5d11'
@@ -46,6 +50,8 @@ async function mockGoldenApi(page, { map = true } = {}) {
     if (pathname.endsWith('/days/1/place-anchors/DAY_FOCUS') && request.method() === 'PUT') { focused = true; return json({ publicId: 'focus-ref', slotType: 'DAY_FOCUS', provider: 'KTO', contentId: '456', contentType: '12' }) }
     if (pathname.endsWith(`/meal-slots/${slotId}/anchor`) && request.method() === 'PUT') { anchored = true; selectedRestaurant = JSON.parse(request.postData() || '{}').contentId; return json({ provider: 'KTO', contentId: selectedRestaurant, contentType: '39' }) }
     if (pathname.endsWith('/days/1/place-recommendations') && request.method() === 'POST') return json({ slotType: 'AFTERNOON_ACTIVITY', candidates: [place], perspectives: [{ perspective: 'NEARBY_COURSE', status: 'READY', message: '현재 일정에서 이동 부담이 적은 장소를 우선했어요.', candidates: [place] }, { perspective: 'SIGNATURE_COURSE', status: 'READY', message: '조금 더 이동하더라도 공식 지역 대표성을 함께 고려했어요.', candidates: [{ ...place, perspective: 'SIGNATURE_COURSE', overallScore: 91 }] }], movementContext: 'READY', recommendationContext: { originSlotType: 'LUNCH', originTitle: '현재 식당', originSource: 'CHRONOLOGICAL_ANCHOR' }, dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사' })
+    if (pathname.endsWith('/days/1/place-alternatives') && request.method() === 'POST') return json({ slotType: 'AFTERNOON_ACTIVITY', candidates: [{ ...place, contentId: '457', title: '다른 관광지', overallScore: 0, evidenceCoverage: 0 }], dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사', recommendationContext: { originSlotType: 'LUNCH', originTitle: '현재 식당', originSource: 'CHRONOLOGICAL_ANCHOR' } })
+    if (pathname.endsWith('/days/1/place-search') && request.method() === 'GET') return json({ slotType: 'AFTERNOON_ACTIVITY', candidates: [{ ...place, contentId: '458', title: '검색 관광지', overallScore: 0, evidenceCoverage: 0 }], dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사', recommendationContext: { originSlotType: 'LUNCH', originTitle: '현재 식당', originSource: 'CHRONOLOGICAL_ANCHOR' } })
     if (pathname.endsWith('/days/1/place-anchors/AFTERNOON_ACTIVITY') && request.method() === 'PUT') return json({ publicId: 'ref', slotType: 'AFTERNOON_ACTIVITY', provider: 'KTO', contentId: '456', contentType: '12' })
     if (pathname.endsWith('/days/1/planner') && request.method() === 'GET') {
       const items = []
@@ -196,6 +202,52 @@ for (const width of [390, 1280]) {
     expect(imageBox.y + imageBox.height).toBeLessThanOrEqual(bodyBox.y + 2)
     await expect(alternativeCard.getByRole('button', { name: '이곳 선택' })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}
+
+for (const width of [360, 390, 768, 1280]) {
+  test(`관광지 추천 카드가 ${width}px에서 이미지 위·정보 아래 구조를 유지한다`, async ({ page }) => {
+    await mockGoldenApi(page); await page.setViewportSize({ width, height: 900 })
+    await createDayTrip(page)
+    await selectDayFocus(page)
+    await page.getByRole('button', { name: '점심 TOP3 보기' }).click()
+    await page.getByRole('button', { name: '이 식당 선택' }).click()
+    await page.getByRole('button', { name: '관광지 추천 보기' }).click()
+
+    const nearbyCard = page.locator('.attraction-results > .attraction-card').first()
+    const imageBox = await nearbyCard.locator('.kto-image').boundingBox()
+    const bodyBox = await nearbyCard.locator('.live-card-body').boundingBox()
+    expect(imageBox.height / imageBox.width).toBeCloseTo(9 / 16, 1)
+    expect(imageBox.y + imageBox.height).toBeLessThanOrEqual(bodyBox.y + 2)
+    await expect(nearbyCard.getByText('일정 적합도')).toBeVisible()
+    await expect(nearbyCard.getByText('근거 커버리지')).toBeVisible()
+    await expect(nearbyCard.getByRole('link', { name: '카카오맵에서 검색' })).toBeVisible()
+    await expect(nearbyCard.getByRole('link', { name: '카카오맵에서 실제 경로 보기' })).toBeVisible()
+    await expect(nearbyCard.getByRole('button', { name: '이 관광지 선택' })).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+
+    if (width === 1280) {
+      await nearbyCard.screenshot({ path: `${screenshotDir}/attraction-nearby-1280.png` })
+      await page.getByRole('tab', { name: '대표 명소 코스' }).click()
+      const signatureCard = page.locator('.attraction-results > .attraction-card').first()
+      await expect(signatureCard.getByText('91점')).toBeVisible()
+      await signatureCard.screenshot({ path: `${screenshotDir}/attraction-signature-1280.png` })
+      await page.getByRole('button', { name: '다른 관광지 보기' }).click()
+      const otherCard = page.locator('.attraction-alternative-results > .attraction-card').first()
+      const otherImageBox = await otherCard.locator('.kto-image').boundingBox()
+      const otherBodyBox = await otherCard.locator('.live-card-body').boundingBox()
+      expect(otherImageBox.height / otherImageBox.width).toBeCloseTo(9 / 16, 1)
+      expect(otherImageBox.y + otherImageBox.height).toBeLessThanOrEqual(otherBodyBox.y + 2)
+      await expect(otherCard.getByText('추천 점수 미산정')).toBeVisible()
+      await expect(otherCard.getByRole('link', { name: '카카오맵에서 실제 경로 보기' })).toBeVisible()
+      await otherCard.screenshot({ path: `${screenshotDir}/attraction-other-1280.png` })
+      await page.getByLabel('관광지 직접 찾기').fill('검색 관광지')
+      await page.locator('.attraction-results .focus-search').getByRole('button', { name: '찾기' }).click()
+      await expect(page.getByRole('heading', { name: '직접 찾은 결과' })).toBeVisible()
+      await expect(page.locator('.attraction-alternative-results > .attraction-card').getByText('검색 관광지')).toBeVisible()
+    }
+
+    if (width === 390) await nearbyCard.screenshot({ path: `${screenshotDir}/attraction-nearby-390.png` })
   })
 }
 

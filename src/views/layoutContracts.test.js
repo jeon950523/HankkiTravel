@@ -14,17 +14,40 @@ describe('BIG-04F layout contracts', () => {
     expect(recommendation).toContain('restaurantExternalActions(candidate)')
     expect(recommendation).toContain('이 식당 선택')
     expect(style).toContain('.decision-results[aria-labelledby="meal-result"] > .live-card,')
-    expect(style).toContain('.restaurant-alternative-results > .live-card { display: block; }')
+    expect(style).toContain('.restaurant-alternative-results > .live-card,')
+    expect(style).toContain('.attraction-alternative-results > .attraction-card { display: block; }')
     expect(style).toContain('aspect-ratio: 16 / 9')
   })
 
-  it('keeps alternative restaurant results vertical without changing place alternatives', () => {
+  it('keeps restaurant and attraction alternatives on the same vertical media contract', () => {
     const view = read('./TripJourneyView.vue')
     const style = read('../style.css')
 
-    expect(view).toContain(":class=\"{ 'restaurant-alternative-results': !activePlaceType }\"")
-    expect(style).toContain('.restaurant-alternative-results > .live-card { display: block; }')
-    expect(style).toContain('.restaurant-alternative-results > .live-card > .kto-image { height: auto; aspect-ratio: 16 / 9; }')
+    expect(view).toContain("'restaurant-alternative-results': !activePlaceType")
+    expect(style).toContain('.restaurant-alternative-results > .live-card,')
+    expect(style).toContain('.restaurant-alternative-results > .live-card > .kto-image,')
+    expect(view).toContain("'attraction-alternative-results': activePlaceType && activePlaceType !== 'STAY'")
+    expect(style).toContain('.attraction-alternative-results > .attraction-card { display: block; }')
+  })
+
+  it('keeps attraction media above full-width evidence and actions', () => {
+    const view = read('./TripJourneyView.vue')
+    const style = read('../style.css')
+    const attraction = view.slice(view.indexOf('class="decision-results attraction-results"'), view.indexOf('class="alternative-actions"', view.indexOf('class="decision-results attraction-results"')))
+
+    expect(attraction.indexOf('<KtoImage')).toBeLessThan(attraction.indexOf('class="live-card-body"'))
+    expect(attraction).toContain('class="surface live-card attraction-card"')
+    expect(attraction).toContain('일정 적합도')
+    expect(attraction).toContain('근거 커버리지')
+    expect(attraction).toContain('이 일정과 잘 맞는 이유')
+    expect(attraction).toContain('가족 이동 조건')
+    expect(attraction).toContain('확인할 점')
+    expect(attraction).toContain('카카오맵에서 검색')
+    expect(attraction).toContain("`이 ${activePlaceType === 'STAY' ? '숙소' : '관광지'} 선택`")
+    expect(style).toContain('.attraction-results > .attraction-card,')
+    expect(style).toContain('.attraction-results > .attraction-card > .kto-image,')
+    expect(style).toContain('.attraction-alternative-results > .attraction-card { display: block; }')
+    expect(style).toContain('.attraction-alternative-results > .attraction-card > .kto-image { height: auto; aspect-ratio: 16 / 9; }')
   })
 
   it('keeps the Final Plan map before a full-width timeline without changing chronology rendering', () => {

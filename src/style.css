@@ -320,9 +320,13 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 .kto-image img { width: 100%; height: 100%; object-fit: cover; }
 .live-card-body { min-width: 0; display: grid; gap: 13px; padding: 20px; }
 .decision-results[aria-labelledby="meal-result"] > .live-card,
-.restaurant-alternative-results > .live-card { width: 100%; max-width: 880px; margin-inline: auto; }
+.restaurant-alternative-results > .live-card,
+.attraction-results > .attraction-card,
+.attraction-alternative-results > .attraction-card { width: 100%; max-width: 880px; margin-inline: auto; }
 .decision-results[aria-labelledby="meal-result"] > .live-card > .kto-image,
-.restaurant-alternative-results > .live-card > .kto-image { width: 100%; height: auto; aspect-ratio: 16 / 9; }
+.restaurant-alternative-results > .live-card > .kto-image,
+.attraction-results > .attraction-card > .kto-image,
+.attraction-alternative-results > .attraction-card > .kto-image { width: 100%; height: auto; aspect-ratio: 16 / 9; }
 .decision-results[aria-labelledby="meal-result"] .menu-evidence p { word-break: keep-all; overflow-wrap: break-word; }
 .decision-results[aria-labelledby="meal-result"] .contact-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
@@ -333,6 +337,7 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 .live-card .action-button { width: 100%; }
 .next-actions { display: grid; gap: 10px; }
 .focus-actions, .focus-search, .contact-actions { display: grid; gap: 10px; }
+.recommendation-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .focus-search { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
 .focus-selection { display: grid; gap: 5px; padding: 14px; border-radius: 12px; background: var(--color-soft); }
 .focus-selection span { color: var(--color-secondary); font-size: 13px; }
@@ -415,9 +420,13 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   .live-card { display: grid; grid-template-columns: minmax(220px, 34%) 1fr; }
   .live-card > .kto-image { height: 100%; aspect-ratio: auto; }
   .decision-results[aria-labelledby="meal-result"] > .live-card,
-  .restaurant-alternative-results > .live-card { display: block; }
+  .restaurant-alternative-results > .live-card,
+  .attraction-results > .attraction-card,
+  .attraction-alternative-results > .attraction-card { display: block; }
   .decision-results[aria-labelledby="meal-result"] > .live-card > .kto-image,
-  .restaurant-alternative-results > .live-card > .kto-image { height: auto; aspect-ratio: 16 / 9; }
+  .restaurant-alternative-results > .live-card > .kto-image,
+  .attraction-results > .attraction-card > .kto-image,
+  .attraction-alternative-results > .attraction-card > .kto-image { height: auto; aspect-ratio: 16 / 9; }
   .next-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .alternative-actions { grid-template-columns: minmax(180px, .4fr) minmax(0, 1fr); align-items: end; }
   .trip-overview { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
@@ -435,6 +444,7 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   .day-map-shell { height: 230px; }
   .day-summary-switcher button { min-width: 140px; }
   .attraction-card .facts { grid-template-columns: 1fr; }
+  .recommendation-actions { grid-template-columns: 1fr; }
   .compact-decision { grid-template-columns: auto minmax(0, 1fr); }
   .compact-decision .text-button { justify-self: start; }
   .route-sanity { grid-template-columns: 1fr; }
