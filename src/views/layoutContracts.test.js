@@ -13,8 +13,18 @@ describe('BIG-04F layout contracts', () => {
     expect(recommendation).toContain('대표 메뉴')
     expect(recommendation).toContain('restaurantExternalActions(candidate)')
     expect(recommendation).toContain('이 식당 선택')
-    expect(style).toContain('.decision-results[aria-labelledby="meal-result"] > .live-card { display: block; }')
+    expect(style).toContain('.decision-results[aria-labelledby="meal-result"] > .live-card,')
+    expect(style).toContain('.restaurant-alternative-results > .live-card { display: block; }')
     expect(style).toContain('aspect-ratio: 16 / 9')
+  })
+
+  it('keeps alternative restaurant results vertical without changing place alternatives', () => {
+    const view = read('./TripJourneyView.vue')
+    const style = read('../style.css')
+
+    expect(view).toContain(":class=\"{ 'restaurant-alternative-results': !activePlaceType }\"")
+    expect(style).toContain('.restaurant-alternative-results > .live-card { display: block; }')
+    expect(style).toContain('.restaurant-alternative-results > .live-card > .kto-image { height: auto; aspect-ratio: 16 / 9; }')
   })
 
   it('keeps the Final Plan map before a full-width timeline without changing chronology rendering', () => {

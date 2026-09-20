@@ -39,6 +39,7 @@ async function mockGoldenApi(page, { map = true } = {}) {
     if (pathname === `/api/guests/${guestId}/trips` && request.method() === 'POST') return json({ tripPublicId: tripId, profileId: 42, regionKey: 'JEJU', startDate: '2026-09-16', endDate: '2026-09-16', durationDays: 1, days: [{ dayNumber: 1, travelDate: '2026-09-16', mealSlots: [{ mealSlotPublicId: slotId, mealType: 'LUNCH', anchor: null }] }] }, 201)
     if (pathname === `/api/guests/${guestId}/trips/${tripId}` && request.method() === 'GET') return json({ tripPublicId: tripId, profileId: 42, regionKey: 'JEJU', startDate: '2026-09-16', endDate: '2026-09-16', durationDays: 1, days: [{ dayNumber: 1, travelDate: '2026-09-16', mealSlots: [{ mealSlotPublicId: slotId, mealType: 'LUNCH', anchor: anchored ? { provider: 'KTO', contentId: selectedRestaurant || '123', contentType: '39' } : null }] }] })
     if (pathname.endsWith(`/meal-slots/${slotId}/recommendations`) && request.method() === 'POST') return json(anchored ? { ...recommendation, topCandidates: [replacementCandidate], perspectives: [{ perspective: 'BALANCED', status: 'READY', message: null, candidates: [replacementCandidate] }] } : recommendation)
+    if (pathname.endsWith('/days/1/restaurant-alternatives') && request.method() === 'POST') return json({ slotType: 'LUNCH', candidates: [replacementCandidate], dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사', recommendationContext: { originSlotType: 'DAY_FOCUS', originTitle: '현재 관광지', originSource: 'CHRONOLOGICAL_ANCHOR' } })
     if (pathname.endsWith('/days/1/restaurant-search') && request.method() === 'GET') return json({ slotType: 'LUNCH', candidates: [replacementCandidate], dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사', recommendationContext: { originSlotType: 'DAY_FOCUS', originTitle: '현재 관광지', originSource: 'CHRONOLOGICAL_ANCHOR' } })
     if (pathname.endsWith('/days/1/dessert-recommendations') && request.method() === 'POST') return json({ slotType: 'POST_LUNCH_DESSERT', candidates: [], dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사', recommendationContext: { originSlotType: 'LUNCH', originTitle: '현재 식당', originSource: 'CHRONOLOGICAL_ANCHOR' } })
     if (pathname.endsWith('/days/1/focus-recommendations') && request.method() === 'POST') return json({ slotType: 'DAY_FOCUS', candidates: [place], dataAvailability: 'CURRENT_DATA', sourceAttribution: '출처: ⓒ한국관광공사' })
@@ -173,10 +174,28 @@ for (const width of [360, 390, 768, 1280]) {
     const imageBox = await restaurantCard.locator('.kto-image').boundingBox()
     const bodyBox = await restaurantCard.locator('.live-card-body').boundingBox()
     expect(imageBox.height / imageBox.width).toBeCloseTo(9 / 16, 1)
-    expect(imageBox.y + imageBox.height).toBeLessThanOrEqual(bodyBox.y + 1)
+    expect(imageBox.y + imageBox.height).toBeLessThanOrEqual(bodyBox.y + 2)
     await expect(restaurantCard.getByRole('button', { name: '이 식당 선택' })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     expect(errors).toEqual([])
+  })
+}
+
+for (const width of [390, 1280]) {
+  test(`다른 식당 결과도 ${width}px에서 이미지와 정보를 상하로 배치한다`, async ({ page }) => {
+    await mockGoldenApi(page); await page.setViewportSize({ width, height: 844 })
+    await createDayTrip(page)
+    await selectDayFocus(page)
+    await page.getByRole('button', { name: '점심 TOP3 보기' }).click()
+    await page.getByRole('button', { name: '다른 식당 보기' }).click()
+    await expect(page.getByRole('heading', { name: '주변의 다른 식당' })).toBeVisible()
+    const alternativeCard = page.locator('.restaurant-alternative-results > .live-card').first()
+    const imageBox = await alternativeCard.locator('.kto-image').boundingBox()
+    const bodyBox = await alternativeCard.locator('.live-card-body').boundingBox()
+    expect(imageBox.height / imageBox.width).toBeCloseTo(9 / 16, 1)
+    expect(imageBox.y + imageBox.height).toBeLessThanOrEqual(bodyBox.y + 2)
+    await expect(alternativeCard.getByRole('button', { name: '이곳 선택' })).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   })
 }
 

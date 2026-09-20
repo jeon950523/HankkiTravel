@@ -319,8 +319,10 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 .kto-image { width: 100%; aspect-ratio: 16 / 9; display: grid; place-items: center; overflow: hidden; color: var(--color-olive); background: linear-gradient(135deg, var(--color-soft), var(--color-sand)); font-size: 13px; font-weight: 700; }
 .kto-image img { width: 100%; height: 100%; object-fit: cover; }
 .live-card-body { min-width: 0; display: grid; gap: 13px; padding: 20px; }
-.decision-results[aria-labelledby="meal-result"] > .live-card { width: 100%; max-width: 880px; margin-inline: auto; }
-.decision-results[aria-labelledby="meal-result"] > .live-card > .kto-image { width: 100%; height: auto; aspect-ratio: 16 / 9; }
+.decision-results[aria-labelledby="meal-result"] > .live-card,
+.restaurant-alternative-results > .live-card { width: 100%; max-width: 880px; margin-inline: auto; }
+.decision-results[aria-labelledby="meal-result"] > .live-card > .kto-image,
+.restaurant-alternative-results > .live-card > .kto-image { width: 100%; height: auto; aspect-ratio: 16 / 9; }
 .decision-results[aria-labelledby="meal-result"] .menu-evidence p { word-break: keep-all; overflow-wrap: break-word; }
 .decision-results[aria-labelledby="meal-result"] .contact-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
@@ -412,8 +414,10 @@ html { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   .wizard-options.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .live-card { display: grid; grid-template-columns: minmax(220px, 34%) 1fr; }
   .live-card > .kto-image { height: 100%; aspect-ratio: auto; }
-  .decision-results[aria-labelledby="meal-result"] > .live-card { display: block; }
-  .decision-results[aria-labelledby="meal-result"] > .live-card > .kto-image { height: auto; aspect-ratio: 16 / 9; }
+  .decision-results[aria-labelledby="meal-result"] > .live-card,
+  .restaurant-alternative-results > .live-card { display: block; }
+  .decision-results[aria-labelledby="meal-result"] > .live-card > .kto-image,
+  .restaurant-alternative-results > .live-card > .kto-image { height: auto; aspect-ratio: 16 / 9; }
   .next-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .alternative-actions { grid-template-columns: minmax(180px, .4fr) minmax(0, 1fr); align-items: end; }
   .trip-overview { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
