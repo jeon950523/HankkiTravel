@@ -2,7 +2,7 @@
 
 > 관광데이터를 바탕으로 가족의 식사 조건과 이동 부담을 함께 고려하는 여행·식당 플래너
 
-[서비스 데모](https://hankki.kro.kr/) · [아키텍처](docs/architecture/README.md) · [API](docs/api/README.md) · [운영 구조](docs/infra/README.md)
+[서비스 데모](https://hankki.kro.kr/) · [아키텍처](docs/architecture/README.md) · [API](docs/api/README.md) · [운영 구조](docs/infra/README.md) · [Troubleshooting](docs/troubleshooting/TROUBLESHOOTING.md)
 
 ## 문제 정의
 
@@ -104,6 +104,20 @@ Spring Boot Backend
 | 지도·교통 | Kakao Map, Kakao Mobility/대중교통 연동 |
 | 배포·운영 | Vercel, AWS EC2, GitHub Actions, GHCR, Prometheus, Grafana |
 
+## Troubleshooting
+
+개발·운영 과정에서 실제로 발생한 10개 사례를 문제, 원인, 분석 과정, 해결, 검증, 배운 점의 흐름으로 기록했습니다. 다음 다섯 사례는 아키텍처·장애 대응·추천 품질·운영 환경 검증·외부 데이터 통합을 대표합니다.
+
+| 대표 사례 | 핵심 판단 |
+| --- | --- |
+| TourAPI Cache First → Live First | 관광 원본 저장 정책 변화에 맞춰 데이터 정합성과 컴플라이언스를 함께 고려해 아키텍처를 전환했습니다. |
+| 502/CORS처럼 보인 Backend Restart | Reverse Proxy와 배포 로그를 기준으로 CORS 오판을 걷어내고 Backend Restart 원인을 분리했습니다. |
+| 18.9km 관광지 추천 문제 | 최신 Anchor 문맥과 경로 검증을 적용해 이동 부담이 큰 추천을 바로잡았습니다. |
+| Mock ↔ Production parity / PWA stale bundle | Mock 통과만으로 끝내지 않고 실제 데이터 계약과 PWA 번들 상태를 운영 환경에서 검증했습니다. |
+| KTO ↔ Kakao strict entity matching | 외부 Provider 간 장소 오연결을 막기 위해 엄격한 엔터티 매칭 기준을 적용했습니다. |
+
+Flyway 빈 DB bootstrap, TourAPI 부분 장애 격리, GHCR → SSM 배포 안정화, SSH Tunnel과 MySQL 인증 분리 등 나머지 사례는 [전체 Troubleshooting 문서](docs/troubleshooting/TROUBLESHOOTING.md)에서 확인할 수 있습니다.
+
 ## 저장소 구성
 
 ```text
@@ -114,7 +128,8 @@ HankkiTravel/
 │   ├── architecture/     # 시스템·모듈 경계
 │   ├── api/              # 공개·운영 API 개요
 │   ├── infra/            # 배포·관측·보안 경계
-│   └── screenshots/      # 포트폴리오용 캡처 안내
+│   ├── screenshots/      # 포트폴리오용 캡처 안내
+│   └── troubleshooting/  # 실제 개발·운영 트러블슈팅 기록
 └── .env.example          # 값 없는 환경 변수 템플릿
 ```
 
