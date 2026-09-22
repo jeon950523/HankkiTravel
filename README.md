@@ -107,6 +107,8 @@ cd ..\backend
 .\mvnw.cmd verify
 ```
 
+백엔드의 MySQL 통합 테스트는 Testcontainers를 사용하므로 Docker Desktop(또는 Docker Engine)이 실행 중이어야 합니다.
+
 ## 보안·공개 범위
 
 - 실제 `.env`, 키 파일, 인증서, 운영 자격증명은 Git 추적 대상에서 제외합니다.
