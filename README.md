@@ -35,35 +35,45 @@
 | 5 | 지도 일정 | Kakao Map과 방문 순서를 함께 보며 일자별 동선을 조정합니다. |
 | 6 | 완성 플랜 | 선택한 관광지·식당, 이동 부담과 경로 확인 행동을 한 화면에 정리합니다. |
 
-### 가족 프로필
+<details>
+<summary><strong>가족 프로필</strong> — 함께 떠나는 사람과 여행 조건을 정리하는 시작 화면</summary>
 
 동행인의 여행 조건을 정리하는 시작 화면입니다. 현재 공개 화면은 프로필 생성 진입과 안내를 제공하며, 입력·저장 기능은 후속 고도화 대상으로 표시됩니다.
 
 ![가족 프로필 생성 진입 화면](docs/screenshots/family-profile-desktop.png)
+</details>
 
-### 여행 시작
+<details>
+<summary><strong>여행 시작</strong> — 여행 지역과 기간을 선택하는 첫 단계</summary>
 
 여행 지역과 기간을 먼저 골라 이후 추천과 일정 구성의 기준을 만듭니다.
 
 ![여행 지역과 기간을 선택하는 화면](docs/screenshots/travel-start-desktop.png)
+</details>
 
-### 식당 추천 및 선택
+<details>
+<summary><strong>식당 추천 및 선택</strong> — 가족 조건과 이동 부담을 반영한 한 끼 선택</summary>
 
 가족 조건과 이동 부담, 현재 위치를 바탕으로 후보를 비교하고 한 끼를 선택합니다.
 
 ![가족 조건과 이동 부담을 바탕으로 식당을 추천하고 선택하는 화면](docs/screenshots/restaurant-recommendation-desktop.png)
+</details>
 
-### 지도 기반 일정 플래너
+<details>
+<summary><strong>지도 기반 일정 플래너</strong> — Kakao Map으로 일자별 동선을 검토</summary>
 
 Kakao Map 위에 방문 순서와 이동 정보를 함께 배치해 일자별 동선을 검토합니다.
 
 ![제주 여행의 지도와 방문 순서를 함께 보여주는 일정 플래너](docs/screenshots/map-planner-desktop.png)
+</details>
 
-### 완성된 여행 플랜
+<details>
+<summary><strong>완성된 여행 플랜</strong> — 선택 결과와 다음 행동을 한곳에서 확인</summary>
 
 완료한 선택을 순서대로 확인하고, 장소 상세·길찾기 등 다음 행동으로 이어집니다.
 
 ![선택한 관광지와 식당, 이동 부담을 정리한 여행 플랜 화면](docs/screenshots/final-plan-desktop.png)
+</details>
 
 ## 서비스 구조
 
