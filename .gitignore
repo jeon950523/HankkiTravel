@@ -1,0 +1,29 @@
+# 환경 변수와 인증 정보
+.env
+.env.*
+!.env.example
+!.env.*.example
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+
+# 개인 키·인증서·운영 전용 파일
+**/keys.txt
+**/*secret*
+**/*credential*
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+
+# 로컬 생성물
+**/node_modules/
+**/dist/
+**/target/
+**/logs/
+coverage/
+playwright-report/
+test-results/
+.DS_Store
