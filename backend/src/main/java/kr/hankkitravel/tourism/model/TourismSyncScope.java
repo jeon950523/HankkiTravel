@@ -1,0 +1,36 @@
+package kr.hankkitravel.tourism.model;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+/** One independently recoverable remote snapshot: legal-dong region plus content type. */
+public record TourismSyncScope(TourismRegion region, TourismContentType contentType) {
+    public static final String ALL_MVP_SCOPES_KEY = "ALL_MVP_SCOPES";
+    public TourismSyncScope {
+        Objects.requireNonNull(region, "region");
+        Objects.requireNonNull(contentType, "contentType");
+    }
+
+    public String key() { return region.name() + "_" + contentType.name(); }
+    public String lDongRegnCd() { return region.lDongRegnCd(); }
+    public String lDongSignguCd() { return region.lDongSignguCd(); }
+    public String contentTypeId() { return contentType.code(); }
+
+    public static List<TourismSyncScope> allMvpScopes() {
+        var scopes = new ArrayList<TourismSyncScope>();
+        for (var region : TourismRegion.values()) {
+            for (var contentType : TourismContentType.values()) {
+                scopes.add(new TourismSyncScope(region, contentType));
+            }
+        }
+        return List.copyOf(scopes);
+}
+
+    public static TourismSyncScope fromKey(String key) {
+        return allMvpScopes().stream().filter(scope -> scope.key().equals(key)).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("지원하지 않는 동기화 범위입니다."));
+    }
+
+    public static boolean isAllMvpScopesKey(String key) { return ALL_MVP_SCOPES_KEY.equals(key); }
+    }

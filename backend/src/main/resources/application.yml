@@ -1,0 +1,107 @@
+server:
+  port: 8300
+  error:
+    include-message: never
+    include-stacktrace: never
+spring:
+  application:
+    name: hankki-travel
+  config:
+    import: optional:file:.env.local[.properties]
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:hankki_planb}?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      connection-timeout: 5000
+  flyway:
+    enabled: true
+    clean-disabled: true
+  sql:
+    init:
+      mode: never
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+hankki:
+  web-base-url: ${WEB_BASE_URL:http://localhost:5175}
+  tourism-sync:
+    page-size: ${TOUR_API_PAGE_SIZE:100}
+    max-pages: ${TOUR_API_MAX_PAGES:1000}
+    suspicious-snapshot-retain-ratio: ${TOUR_SYNC_SUSPICIOUS_RATIO:0.5}
+    admin:
+      enabled: ${ADMIN_SYNC_ENABLED:false}
+      username: ${ADMIN_SYNC_USERNAME:}
+      password: ${ADMIN_SYNC_PASSWORD:}
+      daily-call-budget: ${TOURISM_SYNC_DAILY_CALL_BUDGET:0}
+      operation-zone: ${TOURISM_SYNC_OPERATION_ZONE:Asia/Seoul}
+  tourism-live:
+    max-page-size: ${TOURISM_LIVE_MAX_PAGE_SIZE:30}
+  recommendation:
+    demand-reference-period: ${DEMAND_REFERENCE_PERIOD:202509}
+    list-page-size: ${RECOMMENDATION_LIST_PAGE_SIZE:16}
+    prefilter-limit: ${RECOMMENDATION_PREFILTER_LIMIT:10}
+    detail-limit: ${RECOMMENDATION_DETAIL_LIMIT:6}
+    transit-limit: ${RECOMMENDATION_TRANSIT_LIMIT:3}
+    nearby-radii-meters: ${RECOMMENDATION_NEARBY_RADII_METERS:1000,3000,5000}
+    nearby-minimum-candidates: ${RECOMMENDATION_NEARBY_MINIMUM_CANDIDATES:3}
+    contact-match:
+      max-distance-meters: ${CONTACT_MATCH_MAX_DISTANCE_METERS:120}
+  planner:
+    list-size: ${PLANNER_LIST_SIZE:15}
+    detail-limit: ${PLANNER_DETAIL_LIMIT:6}
+    stay:
+      radius-levels-meters: ${PLANNER_STAY_RADIUS_LEVELS_METERS:3000,8000,15000}
+      minimum-candidates: ${PLANNER_STAY_MINIMUM_CANDIDATES:3}
+      far-distance-meters: ${PLANNER_STAY_FAR_DISTANCE_METERS:20000}
+    attraction:
+      transit-call-limit: ${PLANNER_ATTRACTION_TRANSIT_CALL_LIMIT:6}
+      nearby:
+        max-transit-minutes: ${PLANNER_ATTRACTION_NEARBY_MAX_TRANSIT_MINUTES:90}
+        max-distance-km: ${PLANNER_ATTRACTION_NEARBY_MAX_DISTANCE_KM:25}
+      signature:
+        max-transit-minutes: ${PLANNER_ATTRACTION_SIGNATURE_MAX_TRANSIT_MINUTES:150}
+      day-burden:
+        moderate-transit-minutes: ${PLANNER_DAY_BURDEN_MODERATE_MINUTES:90}
+        high-transit-minutes: ${PLANNER_DAY_BURDEN_HIGH_MINUTES:180}
+      weights:
+        nearby:
+          route: ${PLANNER_ATTRACTION_NEARBY_ROUTE_WEIGHT:50}
+          focus: ${PLANNER_ATTRACTION_NEARBY_FOCUS_WEIGHT:20}
+          mobility: ${PLANNER_ATTRACTION_NEARBY_MOBILITY_WEIGHT:15}
+          relevance: ${PLANNER_ATTRACTION_NEARBY_RELEVANCE_WEIGHT:15}
+        signature:
+          route: ${PLANNER_ATTRACTION_SIGNATURE_ROUTE_WEIGHT:20}
+          focus: ${PLANNER_ATTRACTION_SIGNATURE_FOCUS_WEIGHT:15}
+          relevance: ${PLANNER_ATTRACTION_SIGNATURE_RELEVANCE_WEIGHT:40}
+          demand: ${PLANNER_ATTRACTION_SIGNATURE_DEMAND_WEIGHT:25}
+  integrations:
+    tour-api-base-url: https://apis.data.go.kr/B551011/KorService2
+    demand-strength-base-url: https://apis.data.go.kr/B551011/AreaTarDemDsService
+    resource-demand-base-url: https://apis.data.go.kr/B551011/AreaTarResDemService
+    kakao-base-url: https://dapi.kakao.com
+    connect-timeout: 3s
+    request-timeout: 8s
+planner:
+  route-sanity:
+    public-transit:
+      warn-minutes: ${ROUTE_SANITY_TRANSIT_WARN_MINUTES:60}
+      critical-minutes: ${ROUTE_SANITY_TRANSIT_CRITICAL_MINUTES:120}
+      warn-transfers: ${ROUTE_SANITY_TRANSIT_WARN_TRANSFERS:2}
+    car:
+      warn-distance-km: ${ROUTE_SANITY_CAR_WARN_DISTANCE_KM:20}
+      critical-distance-km: ${ROUTE_SANITY_CAR_CRITICAL_DISTANCE_KM:40}
+    day:
+      warn-total-transit-minutes: ${ROUTE_SANITY_DAY_WARN_TRANSIT_MINUTES:120}
+      critical-total-transit-minutes: ${ROUTE_SANITY_DAY_CRITICAL_TRANSIT_MINUTES:240}
+logging:
+  level:
+    org.springframework.web: INFO
+    java.net.http: OFF

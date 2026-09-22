@@ -1,0 +1,71 @@
+{
+  "response": {
+    "header": {
+      "resultCode": "0000",
+      "resultMsg": "OK"
+    },
+    "body": {
+      "items": {
+        "item": [
+          {
+            "addr1": "제주특별자치도 제주시 고하상로 326",
+            "addr2": "",
+            "areacode": "",
+            "cat1": "",
+            "cat2": "",
+            "cat3": "",
+            "contentid": "2847726",
+            "contenttypeid": "12",
+            "createdtime": "20220901171153",
+            "firstimage": "https://tong.visitkorea.or.kr/cms/resource/12/2847712_image2_1.JPG",
+            "firstimage2": "https://tong.visitkorea.or.kr/cms/resource/12/2847712_image3_1.JPG",
+            "cpyrhtDivCd": "Type3",
+            "mapx": "126.3584772018",
+            "mapy": "33.4394340828",
+            "mlevel": "6",
+            "modifiedtime": "20260904154934",
+            "sigungucode": "",
+            "tel": "",
+            "title": "상가리야자숲",
+            "zipcode": "63036",
+            "lDongRegnCd": "50",
+            "lDongSignguCd": "110",
+            "lclsSystm1": "NA",
+            "lclsSystm2": "NA01",
+            "lclsSystm3": "NA010200"
+          },
+          {
+            "addr1": "제주특별자치도 제주시 조천읍 신촌리",
+            "addr2": "(3403)",
+            "areacode": "",
+            "cat1": "",
+            "cat2": "",
+            "cat3": "",
+            "contentid": "2872927",
+            "contenttypeid": "12",
+            "createdtime": "20221021164141",
+            "firstimage": "https://tong.visitkorea.or.kr/cms/resource/79/3389779_image2_1.jpg",
+            "firstimage2": "https://tong.visitkorea.or.kr/cms/resource/79/3389779_image3_1.jpg",
+            "cpyrhtDivCd": "Type3",
+            "mapx": "126.6130984926",
+            "mapy": "33.5376989336",
+            "mlevel": "6",
+            "modifiedtime": "20260904144647",
+            "sigungucode": "",
+            "tel": "",
+            "title": "신촌 4·3 성터",
+            "zipcode": "63337",
+            "lDongRegnCd": "50",
+            "lDongSignguCd": "110",
+            "lclsSystm1": "HS",
+            "lclsSystm2": "HS01",
+            "lclsSystm3": "HS011200"
+          }
+        ]
+      },
+      "numOfRows": 100,
+      "pageNo": 1,
+      "totalCount": 309
+    }
+  }
+}
