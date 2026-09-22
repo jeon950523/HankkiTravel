@@ -4,6 +4,9 @@
 
 | 파일 | 설명 |
 | --- | --- |
+| `home-desktop.png` | 실제 공개 서비스의 한 끼 중심 여행 시작 메인 화면 |
+| `family-profile-desktop.png` | 가족 프로필 생성 진입 및 현재 제공 범위를 안내하는 화면 |
+| `travel-start-desktop.png` | 여행 지역과 기간을 선택하는 첫 단계 |
 | `map-planner-desktop.png` | 제주 여행의 지도와 방문 순서를 함께 보여주는 일자별 일정 플래너 |
 | `restaurant-recommendation-desktop.png` | 가족 조건과 이동 부담을 반영해 식당을 추천·선택하는 흐름 |
 | `final-plan-desktop.png` | 선택한 관광지·식당과 이동 부담을 정리한 완성 여행 플랜 |
