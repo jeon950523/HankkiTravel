@@ -16,6 +16,22 @@
 - Kakao Map으로 일자별 방문 후보와 경로를 시각화합니다.
 - 관리자 관광데이터 동기화는 기본 비활성화하고, 단일 실행·호출 예산·이상 스냅샷 방어를 둡니다.
 
+## 주요 화면
+
+테스트용 여행·장소 데이터로 구성한 포트폴리오 캡처입니다. 실제 사용자 정보와 운영 비밀값은 포함하지 않습니다.
+
+### 지도 기반 일정 플래너
+
+![제주 여행의 지도와 방문 순서를 함께 보여주는 일정 플래너](docs/screenshots/map-planner-desktop.png)
+
+### 식당 추천 및 선택 흐름
+
+![가족 조건과 이동 부담을 바탕으로 식당을 추천하고 선택하는 화면](docs/screenshots/restaurant-recommendation-desktop.png)
+
+### 완성된 여행 플랜
+
+![선택한 관광지와 식당, 이동 부담을 정리한 여행 플랜 화면](docs/screenshots/final-plan-desktop.png)
+
 ## 서비스 구조
 
 ```text
