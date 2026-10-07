@@ -16,11 +16,11 @@
 
 ## 핵심 기능
 
-- 관광공사 TourAPI 기반으로 제주·서귀포·경주의 관광지·숙박·음식점 데이터를 동기화하고, 비정상 스냅샷을 방어합니다.
+- 관광공사 TourAPI를 요청 시점에 조회해 제주·서귀포·경주의 관광지·숙박·음식점 후보와 상세정보를 구성합니다.
 - 가족 구성원별 식사 조건과 여행 선호를 반영해 식당 후보와 추천 근거를 제공합니다.
 - 여행 일정 중 이동 부담을 계산해 무리한 동선을 경고하고, 단계적으로 플랜을 구성합니다.
 - Kakao Map으로 일자별 방문 후보와 경로를 시각화합니다.
-- 관리자 관광데이터 동기화는 기본 비활성화하고, 단일 실행·호출 예산·이상 스냅샷 방어를 둡니다.
+- 과거 Cache First용 관리자 동기화 경로는 기본 비활성화 상태로 남겨 두며, 현재 사용자 추천·Planner 경로의 데이터 기준으로 사용하지 않습니다.
 
 ## 페이지 안내
 
@@ -83,12 +83,12 @@ Kakao Map 위에 방문 순서와 이동 정보를 함께 배치해 일자별 �
 Vue 3 / Vite Frontend ── Kakao Map
         ↓
 Spring Boot Backend
-   ├── TourAPI / 관광데이터
+   ├── TourAPI Live 조회 / Nutrition reference
    ├── 추천·일정·이동 부담 로직
-   └── MySQL
+   └── MySQL (User / Profile / Trip / 선택 reference)
         ↓
-운영 배포: Vercel / AWS EC2
-운영 자동화: GitHub Actions → GHCR → AWS
+운영 배포: Frontend Vercel / Backend AWS EC2
+운영 자동화: GitHub Actions → GHCR SHA image → AWS SSM → EC2
 관측: Prometheus / Grafana
 ```
 
