@@ -106,17 +106,17 @@ Spring Boot Backend
 
 ## Troubleshooting
 
-개발·운영 과정에서 실제로 발생한 10개 사례를 문제, 원인, 분석 과정, 해결, 검증, 배운 점의 흐름으로 기록했습니다. 다음 다섯 사례는 아키텍처·장애 대응·추천 품질·운영 환경 검증·외부 데이터 통합을 대표합니다.
+운영 중 직접 확인한 장애와 추천 품질 문제, 그리고 구조를 바꾸게 된 설계 결정을 [전체 Troubleshooting 문서](docs/troubleshooting/TROUBLESHOOTING.md)에 정리했습니다.
 
-| 대표 사례 | 핵심 판단 |
+| 사례 | 확인한 핵심 |
 | --- | --- |
-| TourAPI Cache First → Live First | 관광 원본 저장 정책 변화에 맞춰 데이터 정합성과 컴플라이언스를 함께 고려해 아키텍처를 전환했습니다. |
-| 502/CORS처럼 보인 Backend Restart | Reverse Proxy와 배포 로그를 기준으로 CORS 오판을 걷어내고 Backend Restart 원인을 분리했습니다. |
-| 18.9km 관광지 추천 문제 | 최신 Anchor 문맥과 경로 검증을 적용해 이동 부담이 큰 추천을 바로잡았습니다. |
-| Mock ↔ Production parity / PWA stale bundle | Mock 통과만으로 끝내지 않고 실제 데이터 계약과 PWA 번들 상태를 운영 환경에서 검증했습니다. |
-| KTO ↔ Kakao strict entity matching | 외부 Provider 간 장소 오연결을 막기 위해 엄격한 엔터티 매칭 기준을 적용했습니다. |
+| 502/CORS처럼 보인 Backend Restart | 브라우저 오류 메시지보다 배포 시각과 Proxy/Backend 상태를 대조해 실제 502 원인을 분리했습니다. |
+| 18.9km 관광지 추천 | 대상 Slot 직전 Anchor와 제한된 경로 검증을 적용해 현재 동선과 맞지 않는 추천을 수정했습니다. |
+| Mock ↔ Production / PWA stale bundle | 실제 API의 optional field 조합과 오래된 Service Worker client를 Mock 성공과 별도로 검증했습니다. |
+| Flyway 빈 DB bootstrap | 신규 운영 DB에서는 migrate 이후 validate하도록 워크플로 순서를 분리했습니다. |
+| KTO ↔ Kakao strict matching | 이름만 비슷한 다른 지점이 연결되지 않도록 주소·좌표·카테고리를 함께 검사했습니다. |
 
-Flyway 빈 DB bootstrap, TourAPI 부분 장애 격리, GHCR → SSM 배포 안정화, SSH Tunnel과 MySQL 인증 분리 등 나머지 사례는 [전체 Troubleshooting 문서](docs/troubleshooting/TROUBLESHOOTING.md)에서 확인할 수 있습니다.
+TourAPI 부분 장애, GHCR → SSM 배포, SSH Tunnel/MySQL 인증은 짧은 장애 기록으로 남겼습니다. Cache First → Live First 전환과 Front/Back 저장소 분리는 장애가 아니라 운영 조건 변화에 따른 설계 결정으로 구분했습니다.
 
 ## 저장소 구성
 
